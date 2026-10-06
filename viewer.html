@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>조아름의 퓨어데이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f7f4ee;--ink:#24211c;--muted:#6f685c;--line:#ddd5c6;--blue:#3d6f9e}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e5dc;color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic",sans-serif}
+.bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;height:52px;padding:0 12px;background:var(--paper);border-bottom:1px solid var(--line);transition:transform .25s}
+.bar.hide{transform:translateY(-100%)}
+.bar a{text-decoration:none;color:var(--ink)}
+.home{font-size:20px;line-height:1;padding:6px}
+.ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+.ttl b{font-family:"Noto Serif KR",serif}
+select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:#fff;max-width:38vw}
+.progress{position:absolute;left:0;bottom:-1px;height:2px;background:var(--blue);width:0}
+.strip{max-width:720px;margin:0 auto;background:#fff}
+.strip img{display:block;width:100%;height:auto}
+.end{max-width:720px;margin:0 auto;padding:32px 16px 56px;background:var(--paper);text-align:center}
+.end h2{font-family:"Noto Serif KR",serif;margin:0 0 6px;font-size:20px}
+.end p{color:var(--muted);margin:0 0 20px;font-size:14px}
+.nav{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.nav a{text-decoration:none;padding:10px 18px;border-radius:4px;border:1px solid var(--blue);color:var(--blue);font-size:14px}
+.nav a.next{background:var(--blue);color:#fff}
+</style>
+</head>
+<body>
+<div class="bar" id="bar">
+  <a class="home" href="index.html#pureday" title="포털로">←</a>
+  <div class="ttl" id="ttl"></div>
+  <select id="sel" aria-label="회차 선택"></select>
+  <div class="progress" id="prog"></div>
+</div>
+<div class="strip" id="strip"></div>
+<div class="end">
+  <h2 id="endTitle"></h2>
+  <p id="endNote"></p>
+  <div class="nav" id="nav"></div>
+</div>
+<script src="data.js"></script>
+<script>
+const s = window.PORTAL.series.find(x => x.id === 'pureday');
+const eps = s.episodes;
+const q = parseInt(new URLSearchParams(location.search).get('ep'), 10);
+const i = Math.max(0, eps.findIndex(e => e.num === q));
+const ep = eps[i], prev = eps[i - 1], next = eps[i + 1];
+const name = e => e.num === 0 ? '프롤로그' : `${e.num}화`;
+const url = e => `viewer.html?ep=${e.num}`;
+
+document.title = `${name(ep)} · ${ep.title} | ${s.title}`;
+document.getElementById('ttl').innerHTML = `<b>${s.title}</b> · ${name(ep)} ${ep.title}`;
+const sel = document.getElementById('sel');
+for (const e of eps) sel.add(new Option(`${name(e)} · ${e.title}`, e.num, false, e === ep));
+sel.onchange = () => location.href = `viewer.html?ep=${sel.value}`;
+
+const strip = document.getElementById('strip');
+ep.pages.forEach((src, k) => {
+  const im = new Image();
+  im.src = src; im.alt = `${name(ep)} ${k + 1}`;
+  if (k > 2) im.loading = 'lazy';
+  strip.appendChild(im);
+});
+
+document.getElementById('endTitle').textContent = `${name(ep)} · ${ep.title} 끝`;
+document.getElementById('endNote').textContent = next ? `다음: ${name(next)} · ${next.title}` : '다음 화를 준비하고 있어요.';
+document.getElementById('nav').innerHTML =
+  (prev ? `<a href="${url(prev)}">← ${name(prev)}</a>` : '') +
+  `<a href="index.html#pureday">목록</a>` +
+  (next ? `<a class="next" href="${url(next)}">${name(next)} →</a>` : '');
+
+// 아래로 읽는 중엔 상단바 숨김, 위로 올리면 다시 보임 + 진행률
+const bar = document.getElementById('bar'), prog = document.getElementById('prog');
+let lastY = 0;
+addEventListener('scroll', () => {
+  const y = scrollY, max = document.documentElement.scrollHeight - innerHeight;
+  bar.classList.toggle('hide', y > lastY && y > 80);
+  prog.style.width = (max > 0 ? y / max * 100 : 0) + '%';
+  lastY = y;
+}, {passive: true});
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft' && prev) location.href = url(prev);
+  if (e.key === 'ArrowRight' && next) location.href = url(next);
+});
+</script>
+</body>
+</html>

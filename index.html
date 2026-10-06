@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>웹툰 포털 · 여호수아 · 조아름의 퓨어데이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f7f4ee;--card:#fffdf9;--ink:#24211c;--muted:#6f685c;--line:#ddd5c6;--blue:#3d6f9e;--gold:#b98a2c;--red:#8a3a24}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic",sans-serif;line-height:1.6}
+a{color:inherit}
+header{padding:56px 16px 36px;text-align:center}
+header small{letter-spacing:.3em;color:var(--muted);font-size:12px}
+header h1{margin:8px 0 6px;font-family:"Noto Serif KR",Batang,serif;font-size:clamp(28px,6vw,42px);font-weight:700}
+header p{margin:0 auto;max-width:560px;color:var(--muted);font-size:15px}
+nav{position:sticky;top:0;z-index:5;display:flex;justify-content:center;gap:8px;padding:10px 16px;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+nav a{text-decoration:none;padding:6px 14px;border:1px solid var(--line);border-radius:999px;font-size:14px;background:var(--card)}
+nav a:hover{border-color:var(--ink)}
+main{max-width:960px;margin:0 auto;padding:8px 16px 72px}
+.series{margin-top:40px;scroll-margin-top:64px}
+.hero{display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:center;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+.hero img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:50% 35%;border-radius:3px;background:#e9e4da}
+.tag{display:inline-block;font-size:12px;color:var(--accent);border:1px solid currentColor;border-radius:3px;padding:1px 8px}
+.hero h2{margin:10px 0 4px;font-family:"Noto Serif KR",Batang,serif;font-size:30px}
+.hero h2 em{font-style:normal;font-size:14px;color:var(--muted);font-family:"Noto Sans KR",sans-serif;margin-left:6px}
+.hero .meta{color:var(--muted);font-size:13px;margin:0 0 10px}
+.hero p{margin:0 0 16px}
+.btn{display:inline-block;text-decoration:none;background:var(--accent);color:#fff;padding:9px 18px;border-radius:4px;font-weight:500;font-size:14px}
+.btn.ghost{background:none;color:var(--accent);border:1px solid var(--accent);margin-left:6px}
+.eps{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.ep{display:grid;grid-template-columns:96px 1fr;gap:14px;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+.ep:hover{border-color:var(--accent)}
+.ep img{width:96px;height:128px;object-fit:cover;object-position:top;border-radius:3px;background:#e9e4da}
+.ep b{font-size:16px}.ep b span{color:var(--accent);margin-right:6px}
+.ep p{margin:4px 0 6px;font-size:14px;color:#3d3830;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ep .links{font-size:13px;color:var(--muted)}
+.ep .links a{color:var(--accent);margin-right:12px;font-weight:500}
+#pureday{--accent:var(--blue)}#joshua{--accent:var(--red)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 40px}
+@media (max-width:640px){.hero{grid-template-columns:1fr;padding:16px}.hero img{aspect-ratio:4/3}.ep{grid-template-columns:72px 1fr}.ep img{width:72px;height:96px}}
+</style>
+</head>
+<body>
+<header>
+  <small>WEBTOON PORTAL</small>
+  <h1>펜으로 그린 이야기</h1>
+  <p>검은 잉크 펜 선과 수채로 그린 두 편의 웹툰. 보이지 않는 것을 보게 된 사람들의 이야기.</p>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<footer>여호수아 시즌1은 기존 Joshua-story 사이트에서 열립니다.</footer>
+<script src="data.js"></script>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nav = document.getElementById('nav'), main = document.getElementById('main');
+for (const s of window.PORTAL.series) {
+  const own = s.id === 'pureday';
+  const first = s.episodes[0];
+  const read = e => own ? `viewer.html?ep=${e.num}` : e.mobile;
+  nav.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${esc(s.title)}</a>`);
+  const eps = s.episodes.map(e => `
+    <li class="ep">
+      <a href="${read(e)}"><img src="${e.thumb}" alt="" loading="lazy"></a>
+      <div>
+        <b><span>${esc(e.label)}</span>${esc(e.title)}</b>
+        <p>${esc(e.summary)}</p>
+        <div class="links">${own
+          ? `<a href="${read(e)}">보기</a>${e.pages.length}장 · ${e.scenes}장면`
+          : `<a href="${e.mobile}">모바일로 보기</a><a href="${e.pc}">PC로 보기</a>${esc(e.coord)}`}</div>
+      </div>
+    </li>`).join('');
+  main.insertAdjacentHTML('beforeend', `
+    <section class="series" id="${s.id}">
+      <div class="hero">
+        <img src="${s.cover}" alt="${esc(s.title)} 표지">
+        <div>
+          <span class="tag">${esc(s.genre)}</span>
+          <h2>${esc(s.title)}${s.titleNote ? `<em>(${esc(s.titleNote)})</em>` : ''}</h2>
+          <p class="meta">${esc(s.status)}</p>
+          <p>${esc(s.logline)}</p>
+          <a class="btn" href="${read(first)}">${esc(first.label)}부터 보기</a>${s.url ? `<a class="btn ghost" href="${s.url}">작품 사이트</a>` : ''}
+        </div>
+      </div>
+      <ul class="eps">${eps}</ul>
+    </section>`);
+}
+</script>
+</body>
+</html>
