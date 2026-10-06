@@ -6,7 +6,7 @@ window.PORTAL = {
    "titleNote": "가제",
    "genre": "현대 일상 판타지 · 펜+수채 웹툰",
    "logline": "서울에서 펜과 수채로 하루를 그리는 스물네 살 조아름. 아버지가 만든 AR 글래스의 '버그' 덕분에, 동생 하임과 함께 보통 사람 눈에 보이지 않던 영적 전쟁을 보게 된다.",
-   "status": "시즌1 프롤로그 + 3화 공개",
+   "status": "시즌1 프롤로그 + 4화 공개",
    "cover": "assets/pureday/cover.jpg",
    "episodes": [
     {
@@ -187,6 +187,53 @@ window.PORTAL = {
       "assets/pureday/ep3/037.jpg"
      ],
      "thumb": "assets/pureday/ep3/001.jpg"
+    },
+    {
+     "num": 4,
+     "label": "4화",
+     "title": "첫 마물",
+     "summary": "날개 그림자를 본 남매가 빛의 틈을 지나 몽골로 돌아온다. 게르에서 밤새 기다린 **조성민 박사**는 글래스 데이터에서 퓨어랜드의 보호막 에너지가 꺼져 가는 것을 보고 있다. 그런데 하임에게는 비밀이 있다 — 2화 시장에서 글래스로 찍은 사람들의 그림자 영상을 몰래 편집해 '영적 전쟁 실화'로 올리려 한 것. 다음 날 울란바토르 아동센터 담벼락의 금에서 **낙심의 마물**이 기어 나와 젊은 선생님의 그림자에 달라붙는다. 칠흑에 은빛 문양의 퓨마 **은바**가 지붕에서 뛰어내려 선봉을 친다(보통 사람에겐 큰 검은 고양이). 뛰어든 하임은 경계 속으로 빨려 들어가지만 맨손으로는 마물을 이기지 못한다. 페이: \"그림자는 거짓 속에 숨어요.\" 하임이 영상을 고백하고 지우자 허리에 **진리의 허리띠**가 감기고, 장갑과 장비가 첫 중세 무기로 강화된다 — **손바닥을 덧댄 가죽 장갑 + 참나무 쿼터스태프**. 은바와 함께 마물을 연기로 흩는다. 끝: 아퀼라가 내려와 비룡대가 방송 전파를 노린다는 소식을 전한다.",
+     "scenes": 40,
+     "pages": [
+      "assets/pureday/ep4/001.jpg",
+      "assets/pureday/ep4/002.jpg",
+      "assets/pureday/ep4/003.jpg",
+      "assets/pureday/ep4/004.jpg",
+      "assets/pureday/ep4/005.jpg",
+      "assets/pureday/ep4/006.jpg",
+      "assets/pureday/ep4/007.jpg",
+      "assets/pureday/ep4/008.jpg",
+      "assets/pureday/ep4/009.jpg",
+      "assets/pureday/ep4/010.jpg",
+      "assets/pureday/ep4/011.jpg",
+      "assets/pureday/ep4/012.jpg",
+      "assets/pureday/ep4/013.jpg",
+      "assets/pureday/ep4/014.jpg",
+      "assets/pureday/ep4/015.jpg",
+      "assets/pureday/ep4/016.jpg",
+      "assets/pureday/ep4/017.jpg",
+      "assets/pureday/ep4/018.jpg",
+      "assets/pureday/ep4/019.jpg",
+      "assets/pureday/ep4/020.jpg",
+      "assets/pureday/ep4/021.jpg",
+      "assets/pureday/ep4/022.jpg",
+      "assets/pureday/ep4/023.jpg",
+      "assets/pureday/ep4/024.jpg",
+      "assets/pureday/ep4/025.jpg",
+      "assets/pureday/ep4/026.jpg",
+      "assets/pureday/ep4/027.jpg",
+      "assets/pureday/ep4/028.jpg",
+      "assets/pureday/ep4/029.jpg",
+      "assets/pureday/ep4/030.jpg",
+      "assets/pureday/ep4/031.jpg",
+      "assets/pureday/ep4/032.jpg",
+      "assets/pureday/ep4/033.jpg",
+      "assets/pureday/ep4/034.jpg",
+      "assets/pureday/ep4/035.jpg",
+      "assets/pureday/ep4/036.jpg",
+      "assets/pureday/ep4/037.jpg"
+     ],
+     "thumb": "assets/pureday/ep4/001.jpg"
     }
    ]
   },
