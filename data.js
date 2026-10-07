@@ -6,7 +6,7 @@ window.PORTAL = {
    "titleNote": "가제",
    "genre": "현대 일상 판타지 · 펜+수채 웹툰",
    "logline": "서울에서 펜과 수채로 하루를 그리는 스물네 살 조아름. 아버지가 만든 AR 글래스의 '버그' 덕분에, 동생 하임과 함께 보통 사람 눈에 보이지 않던 영적 전쟁을 보게 된다.",
-   "status": "시즌1 프롤로그 + 4화 공개",
+   "status": "시즌1 프롤로그 + 5화 공개",
    "cover": "assets/pureday/cover.jpg",
    "episodes": [
     {
@@ -234,6 +234,52 @@ window.PORTAL = {
       "assets/pureday/ep4/037.jpg"
      ],
      "thumb": "assets/pureday/ep4/001.jpg"
+    },
+    {
+     "num": 5,
+     "label": "5화",
+     "title": "끊기지 않는 방송",
+     "summary": "아퀼라의 경고 다음 날, 아름은 울란바토르가 내려다보이는 언덕에서 'Pureday' 라이브를 연다 — 아동센터 아이들이 그린 그림을 소개하고 도시를 스케치하는 방송. 북쪽에서 **비룡대**(날개 달린 작은 용 떼)가 몰려와 언덕의 송신탑에 잿빛 잡음을 뿜고, 방송이 끊기기 시작한다. 보통 사람 눈에는 케이블이 저절로 움직이는 것뿐 — 원숭이 **치코**가 끊긴 선을 다시 잇고 있다. 그때 구경 온 아이가 넘어져 운다. 카메라가 우는 아이를 비추자 하트가 쏟아지고, 비룡 한 마리가 아름의 귀에 속삭인다. \"계속 찍어. 다들 이런 걸 보고 싶어 해.\" 아름은 카메라를 돌리고 아이를 먼저 안는다. \"제가 방송하는 건 사람이 아니라, 부르심이에요.\" 가슴에 **의의 호심경**가 빛으로 맺히고, 장갑과 장비가 두 번째 단계로 강화된다 — **세 손가락을 덧댄 가죽 궁수 장갑 + 단궁과 작은 화살통**. 아름의 빛 화살, 아퀼라의 강하, 하임과 은바의 목봉, 치코의 마지막 연결로 비룡대가 흩어진다. 끝: 그날 밤, 조성민 박사가 오래된 노트를 펼친다(6화 예고).",
+     "scenes": 40,
+     "pages": [
+      "assets/pureday/ep5/001.jpg",
+      "assets/pureday/ep5/002.jpg",
+      "assets/pureday/ep5/003.jpg",
+      "assets/pureday/ep5/004.jpg",
+      "assets/pureday/ep5/005.jpg",
+      "assets/pureday/ep5/006.jpg",
+      "assets/pureday/ep5/007.jpg",
+      "assets/pureday/ep5/008.jpg",
+      "assets/pureday/ep5/009.jpg",
+      "assets/pureday/ep5/010.jpg",
+      "assets/pureday/ep5/011.jpg",
+      "assets/pureday/ep5/012.jpg",
+      "assets/pureday/ep5/013.jpg",
+      "assets/pureday/ep5/014.jpg",
+      "assets/pureday/ep5/015.jpg",
+      "assets/pureday/ep5/016.jpg",
+      "assets/pureday/ep5/017.jpg",
+      "assets/pureday/ep5/018.jpg",
+      "assets/pureday/ep5/019.jpg",
+      "assets/pureday/ep5/020.jpg",
+      "assets/pureday/ep5/021.jpg",
+      "assets/pureday/ep5/022.jpg",
+      "assets/pureday/ep5/023.jpg",
+      "assets/pureday/ep5/024.jpg",
+      "assets/pureday/ep5/025.jpg",
+      "assets/pureday/ep5/026.jpg",
+      "assets/pureday/ep5/027.jpg",
+      "assets/pureday/ep5/028.jpg",
+      "assets/pureday/ep5/029.jpg",
+      "assets/pureday/ep5/030.jpg",
+      "assets/pureday/ep5/031.jpg",
+      "assets/pureday/ep5/032.jpg",
+      "assets/pureday/ep5/033.jpg",
+      "assets/pureday/ep5/034.jpg",
+      "assets/pureday/ep5/035.jpg",
+      "assets/pureday/ep5/036.jpg"
+     ],
+     "thumb": "assets/pureday/ep5/001.jpg"
     }
    ]
   },
