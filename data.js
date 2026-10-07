@@ -6,7 +6,7 @@ window.PORTAL = {
    "titleNote": "가제",
    "genre": "현대 일상 판타지 · 펜+수채 웹툰",
    "logline": "서울에서 펜과 수채로 하루를 그리는 스물네 살 조아름. 아버지가 만든 AR 글래스의 '버그' 덕분에, 동생 하임과 함께 보통 사람 눈에 보이지 않던 영적 전쟁을 보게 된다.",
-   "status": "시즌1 프롤로그 + 6화 공개",
+   "status": "시즌1 프롤로그 + 7화 공개",
    "cover": "assets/pureday/cover.jpg",
    "episodes": [
     {
@@ -327,6 +327,54 @@ window.PORTAL = {
       "assets/pureday/ep6/037.jpg"
      ],
      "thumb": "assets/pureday/ep6/001.jpg"
+    },
+    {
+     "num": 7,
+     "label": "7화",
+     "title": "황금 성",
+     "summary": "아퀼라의 초대를 받은 다음 날 새벽, 남매는 빛의 틈을 지나 처음으로 **황금 성 안**에 들어간다. 박사는 게르에서 글래스 데이터로 지켜본다(현실의 지휘소). 성벽 위에는 **황금 군대** — 기사, 창병, 도끼병, 기마병, 투석기·발리스타를 다루는 공성병, 마법사, 의사, 검독수리를 타는 하늘군. 성 안에는 그을린 마을에서 피난 온 사람들이 빵을 굽고 성벽을 고치며 산다. 3화의 그을린 마을 아이도 다시 만난다. 훈련장에서 하임은 자기 키보다 긴 창을 든 겁 많은 **견습 창병**과 친해진다. 그때 뿔나팔 — 보호막의 틈으로 **비룡대**가 쏟아져 들어온다. 겁에 질린 견습 창병이 창을 떨어뜨리고, 비룡이 그를 덮친다. 하임이 생각할 틈 없이 몸으로 막아선다. 가슴에 **의의 호심경**이 빛으로 맺히고, 장갑과 장비가 두 번째 단계로 강화된다 — **징 박은 가죽 건틀릿 + 쌍 단검**. 아름의 활, 하늘군과 아퀼라, 공성병의 발리스타가 함께 비룡대를 몰아낸다. 끝: 성의 늙은 기록관이 남매를 큰 홀로 데려간다. 벽에 걸린 **열두 개의 빈 방패** — \"열두 사람이 올 거라 했지요.\"(12화 예고)",
+     "scenes": 40,
+     "pages": [
+      "assets/pureday/ep7/001.jpg",
+      "assets/pureday/ep7/002.jpg",
+      "assets/pureday/ep7/003.jpg",
+      "assets/pureday/ep7/004.jpg",
+      "assets/pureday/ep7/005.jpg",
+      "assets/pureday/ep7/006.jpg",
+      "assets/pureday/ep7/007.jpg",
+      "assets/pureday/ep7/008.jpg",
+      "assets/pureday/ep7/009.jpg",
+      "assets/pureday/ep7/010.jpg",
+      "assets/pureday/ep7/011.jpg",
+      "assets/pureday/ep7/012.jpg",
+      "assets/pureday/ep7/013.jpg",
+      "assets/pureday/ep7/014.jpg",
+      "assets/pureday/ep7/015.jpg",
+      "assets/pureday/ep7/016.jpg",
+      "assets/pureday/ep7/017.jpg",
+      "assets/pureday/ep7/018.jpg",
+      "assets/pureday/ep7/019.jpg",
+      "assets/pureday/ep7/020.jpg",
+      "assets/pureday/ep7/021.jpg",
+      "assets/pureday/ep7/022.jpg",
+      "assets/pureday/ep7/023.jpg",
+      "assets/pureday/ep7/024.jpg",
+      "assets/pureday/ep7/025.jpg",
+      "assets/pureday/ep7/026.jpg",
+      "assets/pureday/ep7/027.jpg",
+      "assets/pureday/ep7/028.jpg",
+      "assets/pureday/ep7/029.jpg",
+      "assets/pureday/ep7/030.jpg",
+      "assets/pureday/ep7/031.jpg",
+      "assets/pureday/ep7/032.jpg",
+      "assets/pureday/ep7/033.jpg",
+      "assets/pureday/ep7/034.jpg",
+      "assets/pureday/ep7/035.jpg",
+      "assets/pureday/ep7/036.jpg",
+      "assets/pureday/ep7/037.jpg",
+      "assets/pureday/ep7/038.jpg"
+     ],
+     "thumb": "assets/pureday/ep7/001.jpg"
     }
    ]
   },
