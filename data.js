@@ -6,7 +6,7 @@ window.PORTAL = {
    "titleNote": "가제",
    "genre": "현대 일상 판타지 · 펜+수채 웹툰",
    "logline": "서울에서 펜과 수채로 하루를 그리는 스물네 살 조아름. 아버지가 만든 AR 글래스의 '버그' 덕분에, 동생 하임과 함께 보통 사람 눈에 보이지 않던 영적 전쟁을 보게 된다.",
-   "status": "시즌1 프롤로그 + 5화 공개",
+   "status": "시즌1 프롤로그 + 6화 공개",
    "cover": "assets/pureday/cover.jpg",
    "episodes": [
     {
@@ -280,6 +280,52 @@ window.PORTAL = {
       "assets/pureday/ep5/036.jpg"
      ],
      "thumb": "assets/pureday/ep5/001.jpg"
+    },
+    {
+     "num": 6,
+     "label": "6화",
+     "title": "조성민 박사의 노트",
+     "summary": "5화 그날 밤, 게르. 조성민 박사가 남매 앞에 낡은 가죽 노트를 펼친다. 첫 장에는 자동차 스케치. **서른 해도 더 전, 독일 뮌헨** — 자동차 디자인을 공부하던 20대 중반의 청년 성민은 온몸에 번진 아토피로 학업을 이어갈 수 없게 된다. **13일의 금요일 밤 11시 30분**, 천둥번개 치는 방에서 그는 삶을 끝내려 한다. 소주 세 병을 마셔도 취하지 않는다. 마지막 순간, 천둥과 함께 마음을 울리는 음성 — **\"그만두지 못해!\"** 책더미 맨 아래에서 찾은 성경을 펼치니 **욥기**. 모태신앙이었지만 처음 읽는 욥의 고난이 곧 자기 모습이었다. 밤새 읽어 마지막 장에 닿았을 때, 그는 회복과 복이 임할 것을 안다. 그날부터 하루 스무 장의 성경, 세 시간의 기도 — 하나님이 부르시고 그가 대답한 것을 모두 적은 것이 이 노트다. 다시 현재. 노트 뒤쪽엔 용과 갑옷의 스케치가 스친다 — \"그건 다음에.\" 박사는 남매의 글래스 데이터를 보여 준다: **보호막은 기도와 선한 일로 짜인 막**. 타미의 물동이(**거울 원리**), 아름의 수채와 데이터로 그린 **퓨어랜드 첫 지도**, 함께 드리는 기도. 끝: 아퀼라 — \"황금 성 문이 열렸어요.\"",
+     "scenes": 40,
+     "pages": [
+      "assets/pureday/ep6/001.jpg",
+      "assets/pureday/ep6/002.jpg",
+      "assets/pureday/ep6/003.jpg",
+      "assets/pureday/ep6/004.jpg",
+      "assets/pureday/ep6/005.jpg",
+      "assets/pureday/ep6/006.jpg",
+      "assets/pureday/ep6/007.jpg",
+      "assets/pureday/ep6/008.jpg",
+      "assets/pureday/ep6/009.jpg",
+      "assets/pureday/ep6/010.jpg",
+      "assets/pureday/ep6/011.jpg",
+      "assets/pureday/ep6/012.jpg",
+      "assets/pureday/ep6/013.jpg",
+      "assets/pureday/ep6/014.jpg",
+      "assets/pureday/ep6/015.jpg",
+      "assets/pureday/ep6/016.jpg",
+      "assets/pureday/ep6/017.jpg",
+      "assets/pureday/ep6/018.jpg",
+      "assets/pureday/ep6/019.jpg",
+      "assets/pureday/ep6/020.jpg",
+      "assets/pureday/ep6/021.jpg",
+      "assets/pureday/ep6/022.jpg",
+      "assets/pureday/ep6/023.jpg",
+      "assets/pureday/ep6/024.jpg",
+      "assets/pureday/ep6/025.jpg",
+      "assets/pureday/ep6/026.jpg",
+      "assets/pureday/ep6/027.jpg",
+      "assets/pureday/ep6/028.jpg",
+      "assets/pureday/ep6/029.jpg",
+      "assets/pureday/ep6/030.jpg",
+      "assets/pureday/ep6/031.jpg",
+      "assets/pureday/ep6/032.jpg",
+      "assets/pureday/ep6/033.jpg",
+      "assets/pureday/ep6/034.jpg",
+      "assets/pureday/ep6/035.jpg",
+      "assets/pureday/ep6/036.jpg"
+     ],
+     "thumb": "assets/pureday/ep6/001.jpg"
     }
    ]
   },
