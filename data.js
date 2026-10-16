@@ -987,7 +987,8 @@ window.PORTAL = {
       "assets/pureday/ep13/056.jpg",
       "assets/pureday/ep13/057.jpg",
       "assets/pureday/ep13/058.jpg",
-      "assets/pureday/ep13/059.jpg"
+      "assets/pureday/ep13/059.jpg",
+      "assets/pureday/ep13/060.jpg"
      ],
      "thumb": "assets/pureday/ep13/001.jpg"
     }
