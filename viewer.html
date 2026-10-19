@@ -41,21 +41,22 @@ select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
   <p id="endNote"></p>
   <div class="nav" id="nav"></div>
 </div>
-<script src="data.js"></script>
+<script src="data.js?v=202610200434"></script>
 <script>
-const s = window.PORTAL.series.find(x => x.id === 'pureday');
+const sid = new URLSearchParams(location.search).get('s') || 'pureday';  // 2026-10-20 시즌2 카드
+const s = window.PORTAL.series.find(x => x.id === sid) || window.PORTAL.series.find(x => x.id === 'pureday');
 const eps = s.episodes;
 const q = parseInt(new URLSearchParams(location.search).get('ep'), 10);
 const i = Math.max(0, eps.findIndex(e => e.num === q));
 const ep = eps[i], prev = eps[i - 1], next = eps[i + 1];
-const name = e => e.num === 0 ? '프롤로그' : `${e.num}화`;
-const url = e => `viewer.html?ep=${e.num}`;
+const name = e => e.num === 0 ? '프롤로그' : (e.label || `${e.num}화`);  // 2026-10-20 시즌2는 label '시즌2 1화'
+const url = e => `viewer.html?s=${s.id}&ep=${e.num}`;
 
-document.title = `${name(ep)} · ${ep.title} | ${s.title}`;
+document.title = `${name(ep)} · ${ep.title} | ${s.title}${s.subtitle ? ' · ' + s.subtitle : ''}`;
 document.getElementById('ttl').innerHTML = `<b>${s.title}</b> · ${name(ep)} ${ep.title}`;
 const sel = document.getElementById('sel');
 for (const e of eps) sel.add(new Option(`${name(e)} · ${e.title}`, e.num, false, e === ep));
-sel.onchange = () => location.href = `viewer.html?ep=${sel.value}`;
+sel.onchange = () => location.href = `viewer.html?s=${s.id}&ep=${sel.value}`;
 
 const strip = document.getElementById('strip');
 ep.pages.forEach((src, k) => {
@@ -69,7 +70,7 @@ document.getElementById('endTitle').textContent = `${name(ep)} · ${ep.title} �
 document.getElementById('endNote').textContent = next ? `다음: ${name(next)} · ${next.title}` : '다음 화를 준비하고 있어요.';
 document.getElementById('nav').innerHTML =
   (prev ? `<a href="${url(prev)}">← ${name(prev)}</a>` : '') +
-  `<a href="index.html#pureday">목록</a>` +
+  `<a href="index.html#${s.id}">목록</a>` +
   (next ? `<a class="next" href="${url(next)}">${name(next)} →</a>` : '');
 
 // 아래로 읽는 중엔 상단바 숨김, 위로 올리면 다시 보임 + 진행률
