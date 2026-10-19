@@ -37,7 +37,8 @@ main{max-width:960px;margin:0 auto;padding:8px 16px 72px}
 .ep p{margin:4px 0 6px;font-size:14px;color:#3d3830;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .ep .links{font-size:13px;color:var(--muted)}
 .ep .links a{color:var(--accent);margin-right:12px;font-weight:500}
-#pureday{--accent:var(--blue)}#joshua{--accent:var(--red)}
+#pureday{--accent:var(--blue)}#joshua{--accent:var(--red)}#games{--accent:var(--gold)}
+.game .hero img{aspect-ratio:3/2;object-position:center}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 40px}
 @media (max-width:640px){.hero{grid-template-columns:1fr;padding:16px}.hero img{aspect-ratio:4/3}.ep{grid-template-columns:72px 1fr}.ep img{width:72px;height:96px}}
 </style>
@@ -86,6 +87,21 @@ for (const s of window.PORTAL.series) {
       <ul class="eps">${eps}</ul>
     </section>`);
 }
+// 2026-10-20 게임 코너: 퓨어데이 체스 (youtebe3/project/CHESS001 → chess/)
+nav.insertAdjacentHTML('beforeend', '<a href="#games">게임</a>');
+main.insertAdjacentHTML('beforeend', `
+  <section class="series game" id="games">
+    <div class="hero">
+      <img src="chess/assets/cover.jpg" alt="퓨어데이 체스 말 라인업">
+      <div>
+        <span class="tag">캐주얼 게임 · 체스</span>
+        <h2>퓨어데이 체스<em>PUREDAY CHESS</em></h2>
+        <p class="meta">빛 진영 vs 드래곤 군단 · 컴퓨터와 / 둘이서</p>
+        <p>조성민 박사 킹, 조아름 퀸, 조하임 나이트, 아퀼라, 견습 창병과 함께 큰 용의 드래곤 군단에 맞서요. 폰에서도 바로 둘 수 있어요.</p>
+        <a class="btn" href="chess/">체스 두기</a>
+      </div>
+    </div>
+  </section>`);
 </script>
 </body>
 </html>
