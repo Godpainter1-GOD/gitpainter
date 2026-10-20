@@ -89,7 +89,7 @@ for (const s of window.PORTAL.series) {
 }
 // 2026-10-20 게임 코너: 퓨어데이 체스 (youtebe3/project/CHESS001 → chess/)
 // 2026-10-20 대표님: '장기랑 슈팅 버튼이 없어요' → 위 메뉴에 게임마다 버튼
-nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a><a href="#games-poker">포커 게임</a>');
+nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a><a href="#games-poker">포커 게임</a><a href="#games-puzzle">퍼즐 게임</a>');
 main.insertAdjacentHTML('beforeend', `
   <section class="series game" id="games">
     <div class="hero">
@@ -138,6 +138,18 @@ main.insertAdjacentHTML('beforeend', `
         <p class="meta">텍사스 홀덤 · 빛의 구슬(실제 돈 없음) · 5명 / 대왕용 테이블 7명</p>
         <p>조하임·김미아·라합·늑대개 우두머리와 한 테이블에 앉아요. 처음이면 '포커 배우기'와 페이의 조언이 차근차근 알려 줘요.</p>
         <a class="btn" href="poker/">포커 하기</a>
+      </div>
+    </div>
+  </section>
+  <section class="series game" id="games-puzzle">
+    <div class="hero">
+      <img src="puzzle/assets/cover.jpg" alt="퓨어데이 퍼즐 — 회차 장면들과 맞추는 중인 퍼즐 조각">
+      <div>
+        <span class="tag">캐주얼 게임 · 퍼즐</span>
+        <h2>퓨어데이 퍼즐<em>PUREDAY JIGSAW</em></h2>
+        <p class="meta">시즌1 프롤로그~16화 · 시즌2 1~3화 · 회차마다 네 장면</p>
+        <p>웹툰 장면을 직소 퍼즐로 맞춰요. 쉬움 20·30조각부터 고급 50·70조각까지, 밑그림·테두리 조각·힌트 도우미도 있어요.</p>
+        <a class="btn" href="puzzle/">퍼즐 맞추기</a>
       </div>
     </div>
   </section>`);
