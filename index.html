@@ -88,7 +88,8 @@ for (const s of window.PORTAL.series) {
     </section>`);
 }
 // 2026-10-20 게임 코너: 퓨어데이 체스 (youtebe3/project/CHESS001 → chess/)
-nav.insertAdjacentHTML('beforeend', '<a href="#games">게임</a>');
+// 2026-10-20 대표님: '장기랑 슈팅 버튼이 없어요' → 위 메뉴에 게임마다 버튼
+nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a>');
 main.insertAdjacentHTML('beforeend', `
   <section class="series game" id="games">
     <div class="hero">
