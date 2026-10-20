@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>퓨어데이 포커</title>
+<meta name="description" content="『퓨어데이』 캐릭터들과 빛의 구슬을 걸고 두는 캐주얼 텍사스 홀덤 (실제 돈은 쓰지 않아요)">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="logo"><b>퓨어데이</b> 포커<small>PUREDAY HOLD'EM</small></div>
+    <div class="top-btns">
+      <button class="icon" id="btnLearnTop" aria-label="포커 배우기" title="포커 배우기">📖</button>
+      <button class="icon" id="btnRules" aria-label="족보 보기" title="족보">?</button>
+      <button class="icon" id="btnSound" aria-label="소리 끄기/켜기" title="소리">🔊</button>
+      <button class="icon" id="btnMenu" aria-label="메뉴" title="메뉴">☰</button>
+    </div>
+  </header>
+
+  <div class="table" id="table">
+    <div class="felt"></div>
+    <div class="center">
+      <div class="board" id="board"></div>
+      <div class="pot" id="pot">팟 🔮 0</div>
+      <div class="round" id="roundName"></div>
+    </div>
+    <div id="seats"></div>
+  </div>
+
+  <section class="me" id="mePanel">
+    <div class="my-cards" id="myCards"></div>
+    <div class="my-info">
+      <div class="my-hand" id="myHand">카드를 기다리는 중</div>
+      <div class="my-eq" id="myEq"></div>
+    </div>
+  </section>
+
+  <div class="bubble" id="bubble" aria-live="polite"><span class="who">페이</span><span id="bubbleText">어서 와요! 빛의 구슬을 걸고 한판 해요.</span></div>
+
+  <nav class="actions" id="actions">
+    <button id="btnFold" class="act fold">폴드</button>
+    <button id="btnCall" class="act call">체크</button>
+    <button id="btnRaise" class="act raise">레이즈</button>
+    <button id="btnHint" class="act hint" title="이길 확률 보기">💡</button>
+  </nav>
+  <div class="raise-box" id="raiseBox" hidden>
+    <div class="raise-row"><input type="range" id="raiseRange" min="0" max="100" step="10"><b id="raiseVal">0</b></div>
+    <div class="raise-presets"><button data-p="half">½ 팟</button><button data-p="pot">팟</button><button data-p="allin">올인</button></div>
+    <div class="raise-presets"><button id="raiseCancel" class="ghost">취소</button><button id="raiseOk" class="primary-sm">이만큼 걸기</button></div>
+  </div>
+  <button class="next" id="btnNext" hidden>다음 판 ▶</button>
+</div>
+
+<!-- 시작 메뉴 -->
+<div class="modal" id="menu" hidden>
+  <div class="sheet">
+    <h1><b>퓨어데이</b> 포커</h1>
+    <p class="sub">빛의 구슬을 걸고 두는 텍사스 홀덤 · 실제 돈은 쓰지 않아요</p>
+    <div class="group"><span class="glabel">테이블</span>
+      <div class="seg" data-key="table"><button data-v="5" class="on">5명 테이블</button><button data-v="7">대왕용 테이블 (7명)</button></div></div>
+    <div class="who-row" id="whoRow"></div>
+    <label class="coach-toggle"><input type="checkbox" id="coachOn" checked> 🦜 페이의 조언 켜기 <small>(내 차례마다 무엇을 하면 좋은지 알려 줘요)</small></label>
+    <button class="primary" id="btnStart">테이블에 앉기</button>
+    <button class="ghost-btn" id="btnLearn">📖 포커 배우기 (처음이라면 여기부터)</button>
+    <p class="credit">시작 구슬 1000개 · 블라인드 10/20 (10판마다 올라가요)<br>캐릭터 · 『퓨어데이』 Godpainter · AI 활용 그림</p>
+  </div>
+</div>
+
+<!-- 튜토리얼 -->
+<div class="modal" id="tutorial" hidden>
+  <div class="sheet tut">
+    <div class="tut-step" id="tutStep">1 / 7</div>
+    <h2 id="tutTitle"></h2>
+    <div class="tut-body" id="tutBody"></div>
+    <div class="tut-dots" id="tutDots"></div>
+    <div class="tut-nav"><button class="ghost-btn" id="tutPrev">◀ 이전</button><button class="primary" id="tutNext">다음 ▶</button></div>
+    <button class="tut-skip" id="tutSkip">건너뛰기</button>
+  </div>
+</div>
+
+<!-- 족보 -->
+<div class="modal" id="rules" hidden>
+  <div class="sheet rules">
+    <h2>족보 (높은 순)</h2>
+    <ol id="rulesList"></ol>
+    <p class="note">내 카드 2장 + 가운데 카드 5장 중 가장 좋은 5장으로 겨뤄요. 같은 족보면 높은 숫자가 이겨요.<br>그림 카드: ♥♦ J 조하임 · Q 조아름 · K 조성민 박사 / ♠♣ J 늑대개 우두머리 · Q 라합 · K 대왕용</p>
+    <button class="primary" id="btnRulesOk">알겠어요</button>
+  </div>
+</div>
+
+<!-- 알림 -->
+<div class="modal" id="notice" hidden>
+  <div class="sheet">
+    <h2 id="noticeTitle"></h2>
+    <p id="noticeText"></p>
+    <button class="primary" id="noticeOk">확인</button>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -89,7 +89,7 @@ for (const s of window.PORTAL.series) {
 }
 // 2026-10-20 게임 코너: 퓨어데이 체스 (youtebe3/project/CHESS001 → chess/)
 // 2026-10-20 대표님: '장기랑 슈팅 버튼이 없어요' → 위 메뉴에 게임마다 버튼
-nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a>');
+nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a><a href="#games-poker">포커 게임</a>');
 main.insertAdjacentHTML('beforeend', `
   <section class="series game" id="games">
     <div class="hero">
@@ -126,6 +126,18 @@ main.insertAdjacentHTML('beforeend', `
         <p class="meta">10단계 · 단계마다 중간보스 · 마지막은 대왕용</p>
         <p>조아름이 빛의 화살로 드래곤 군단을 물리쳐요. 키보드는 방향키, 폰은 손가락으로 끌면 되고 화살은 자동으로 나가요.</p>
         <a class="btn" href="shooter/">슈팅 시작</a>
+      </div>
+    </div>
+  </section>
+  <section class="series game" id="games-poker">
+    <div class="hero">
+      <img src="poker/assets/cover.jpg" alt="퓨어데이 포커 — 캐릭터들과 펼친 하트 로열 플러시">
+      <div>
+        <span class="tag">캐주얼 게임 · 포커</span>
+        <h2>퓨어데이 포커<em>PUREDAY HOLD'EM</em></h2>
+        <p class="meta">텍사스 홀덤 · 빛의 구슬(실제 돈 없음) · 5명 / 대왕용 테이블 7명</p>
+        <p>조하임·김미아·라합·늑대개 우두머리와 한 테이블에 앉아요. 처음이면 '포커 배우기'와 페이의 조언이 차근차근 알려 줘요.</p>
+        <a class="btn" href="poker/">포커 하기</a>
       </div>
     </div>
   </section>`);
