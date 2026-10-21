@@ -120,6 +120,7 @@ function drawBoard() {
     const r2 = el("text", { x: X(c), y: G.bottom + 42, class: "who" }, sl); r2.textContent = "";
   }
   for (const [c] of L.traced) showDone(c, false);
+  markCursor();
 }
 function fit(s, w) { const max = Math.max(2, Math.floor(w / 12)); return s.length > max ? s.slice(0, max - 1) + "…" : s; }
 
@@ -204,3 +205,104 @@ drawSetup();
 // 개발용: #demo=20 → 20명 사다리 바로 만들고 모두 타기
 const hp = new URLSearchParams(location.hash.slice(1));
 if (hp.has("demo")) { S.n = Number(hp.get("demo")) || 20; S.wins = Number(hp.get("wins")) || 3; S.names = PUREDAY.slice(0, 20); startLadder(); if (!hp.has("still")) setTimeout(() => $("btnAll").click(), 300); }
+
+// ---------------------------------------------------------------- 키보드 (2026-10-21 대표님: "마우스로 하니까 너무 어려워요 · 키 설정 옵션")
+// 동작마다 키를 바꿀 수 있다. 설정은 localStorage 에 저장
+const ACTIONS = [
+  ["prev", "← 왼쪽 이름 고르기", "ArrowLeft"],
+  ["next", "→ 오른쪽 이름 고르기", "ArrowRight"],
+  ["go", "고른 이름 타기 · 사다리 만들기", "Enter"],
+  ["one", "다음 사람 타기", "Space"],
+  ["all", "한꺼번에 모두", "KeyA"],
+  ["remake", "사다리 새로 만들기", "KeyR"],
+  ["back", "처음으로", "Escape"],
+  ["more", "참가 인원 +1 (준비 화면)", "ArrowUp"],
+  ["less", "참가 인원 −1 (준비 화면)", "ArrowDown"],
+];
+const KEY_SAVE = "pureday-ladder-keys-v1";
+let KEYS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
+try { Object.assign(KEYS, JSON.parse(localStorage.getItem(KEY_SAVE) || "{}")); } catch (e) { /* 저장 안 됨 */ }
+const saveKeys = () => { try { localStorage.setItem(KEY_SAVE, JSON.stringify(KEYS)); } catch (e) { /* 저장 안 됨 */ } };
+function keyLabel(code) {
+  const map = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Enter: "Enter", Space: "Space", Escape: "Esc",
+    Backspace: "⌫", Tab: "Tab", ShiftLeft: "Shift", ShiftRight: "Shift(오)", ControlLeft: "Ctrl", AltLeft: "Alt" };
+  if (map[code]) return map[code];
+  if (code.startsWith("Key")) return code.slice(3);
+  if (code.startsWith("Digit")) return code.slice(5);
+  if (code.startsWith("Numpad")) return "숫자판 " + code.slice(6);
+  return code;
+}
+let cursor = 0;
+function markCursor() {
+  if (!L) return;
+  cursor = Math.max(0, Math.min(L.n - 1, cursor));
+  document.querySelectorAll("#board .name").forEach((n) => n.classList.toggle("sel", Number(n.dataset.c) === cursor));
+  const sc = $("boardScroll");
+  if (sc.scrollWidth > sc.clientWidth) { const x = X(cursor); if (x < sc.scrollLeft + 40 || x > sc.scrollLeft + sc.clientWidth - 40) sc.scrollTo({ left: x - sc.clientWidth / 2, behavior: "smooth" }); }
+}
+function moveCursor(d) {
+  if (!L) return;
+  // 아직 안 탄 이름으로 건너뛰며 움직인다 (모두 탔으면 그냥 한 칸씩)
+  const left = [...Array(L.n).keys()].filter((i) => !L.traced.has(i));
+  let c = cursor;
+  for (let k = 0; k < L.n; k++) { c = (c + d + L.n) % L.n; if (!left.length || left.includes(c)) break; }
+  cursor = c; markCursor(); tone([700], 0.025, 0.02);
+  say(`${L.names[cursor]} — ${keyLabel(KEYS.go)} 키를 누르면 타요!`);
+}
+function showHints() {
+  const k = (a) => `<kbd>${keyLabel(KEYS[a])}</kbd>`;
+  $("btnOne").querySelector("kbd")?.remove();   // 이미 붙은 키 표시는 떼고 다시 붙인다
+  $("btnOne").innerHTML = $("btnOne").textContent.trim() + k("one");
+  $("btnAll").innerHTML = "한꺼번에 모두" + k("all");
+  $("btnRemake").innerHTML = "🔀 사다리 새로 만들기" + k("remake");
+  $("btnBack").innerHTML = "처음으로" + k("back");
+  $("btnMake").innerHTML = "사다리 만들기" + k("go");
+  $("keyHint").innerHTML = `키보드: ${k("prev")}${k("next")} 이름 고르기 · ${k("go")} 고른 이름 타기 · ⌨ 버튼에서 키를 바꿀 수 있어요`;
+}
+// updateButtons 가 글자를 바꾸므로, 그 뒤에 키 표시를 다시 붙인다
+const _updateButtons = updateButtons;
+updateButtons = function () { _updateButtons(); showHints(); };   // eslint-disable-line no-func-assign
+
+let waiting = null;   // 키 설정에서 새 키를 기다리는 동작
+function drawKeyList() {
+  $("keyList").innerHTML = ACTIONS.map(([a, label]) =>
+    `<div><span>${label}</span><button data-a="${a}" class="${waiting === a ? "wait" : ""}">${waiting === a ? "키를 누르세요…" : keyLabel(KEYS[a])}</button></div>`).join("");
+}
+$("btnKeys").onclick = () => { waiting = null; drawKeyList(); $("keysModal").hidden = false; };
+$("keysClose").onclick = () => { waiting = null; $("keysModal").hidden = true; showHints(); };
+$("keysReset").onclick = () => { KEYS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k])); saveKeys(); waiting = null; drawKeyList(); showHints(); };
+$("keyList").onclick = (e) => { const b = e.target.closest("button"); if (b) { waiting = b.dataset.a; drawKeyList(); } };
+
+addEventListener("keydown", (e) => {
+  // 1) 키 설정 중: 누른 키를 그 동작에 (다른 동작이 쓰던 키면 서로 바꾼다)
+  if (!$("keysModal").hidden) {
+    if (!waiting) { if (e.code === "Escape") $("keysClose").click(); return; }
+    e.preventDefault();
+    const other = Object.keys(KEYS).find((a) => a !== waiting && KEYS[a] === e.code);
+    if (other) KEYS[other] = KEYS[waiting];
+    KEYS[waiting] = e.code; waiting = null; saveKeys(); drawKeyList(); showHints();
+    tone([880], 0.05, 0.04);
+    return;
+  }
+  const act = Object.keys(KEYS).find((a) => KEYS[a] === e.code);
+  if (!act || e.repeat) return;
+  const typing = e.target.tagName === "INPUT" && e.target.type === "text";
+  // 2) 준비 화면
+  if (!$("setup").hidden) {
+    if (act === "go") { e.preventDefault(); $("btnMake").click(); }
+    else if (!typing && act === "more") { e.preventDefault(); document.querySelector('.stepper [data-d="1"]').click(); }
+    else if (!typing && act === "less") { e.preventDefault(); document.querySelector('.stepper [data-d="-1"]').click(); }
+    return;
+  }
+  // 3) 사다리 화면
+  if ($("play").hidden || typing) return;
+  e.preventDefault();
+  if (act === "prev") moveCursor(-1);
+  else if (act === "next") moveCursor(1);
+  else if (act === "go") { if (!busy && L && !L.traced.has(cursor)) run([cursor], false).then(() => moveCursor(1)); }
+  else if (act === "one") $("btnOne").click();
+  else if (act === "all") $("btnAll").click();
+  else if (act === "remake") { $("btnRemake").click(); cursor = 0; markCursor(); }
+  else if (act === "back") $("btnBack").click();
+});
+showHints();

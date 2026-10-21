@@ -60,3 +60,20 @@ button { cursor: pointer; }
 .summary li.w { color: var(--red); font-weight: 800; }
 .credit { text-align: center; font-size: 12px; color: var(--muted); margin-top: 18px; }
 @media (max-width: 520px) { .row.two { grid-template-columns: 1fr; } .summary ul { columns: 1; } }
+
+/* 키보드 (2026-10-21 대표님: "키보드로 할 수 있게 키 설정 옵션") */
+.top-btns { display: flex; gap: 6px; }
+.modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(36, 33, 28, .5); padding: 14px; z-index: 50; }
+.sheet { width: min(100%, 420px); background: var(--paper); border-radius: 16px; padding: 18px; box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.sheet h2 { margin: 0; font-size: 20px; text-align: center; } .sheet .sub { color: var(--muted); font-size: 13px; text-align: center; margin: 4px 0 12px; }
+.keylist { display: grid; gap: 6px; }
+.keylist div { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.keylist button { min-width: 96px; min-height: 36px; border-radius: 8px; border: 2px solid var(--blue); background: #eef3f8; font-weight: 800; }
+.keylist button.wait { border-color: var(--red); background: #ffe5e6; animation: blinkk 1s infinite; }
+@keyframes blinkk { 50% { opacity: .5; } }
+.keybtns { display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; margin-top: 12px; }
+kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin-left: 6px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, .7); font: 700 12px/1.5 var(--font); opacity: .9; }
+.ghost kbd { border-color: var(--line); }
+.keyhint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 8px; }
+#board .name.sel rect { stroke: var(--gold); stroke-width: 4; }
+#board .name.sel text { fill: var(--gold); }
