@@ -39,6 +39,15 @@ main{max-width:960px;margin:0 auto;padding:8px 16px 72px}
 .ep .links a{color:var(--accent);margin-right:12px;font-weight:500}
 #pureday{--accent:var(--blue)}#joshua{--accent:var(--red)}#games,.game{--accent:var(--gold)}.game .btn{font-size:16px;padding:11px 24px}
 .game .hero img{aspect-ratio:3/2;object-position:center}
+nav a.nav-games{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:700}
+.gallery{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:center;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:6px;text-decoration:none}
+.gallery:hover{border-color:var(--gold)}
+.gallery .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.gallery .thumbs img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:3px;background:#e9e4da}
+.gallery h2{margin:8px 0 4px;font-family:"Noto Serif KR",Batang,serif;font-size:26px}
+.gallery h2 em{font-style:normal;font-size:13px;color:var(--muted);font-family:"Noto Sans KR",sans-serif;margin-left:6px}
+.gallery p{margin:0 0 12px;color:#3d3830}
+@media (max-width:640px){.gallery{grid-template-columns:1fr;padding:14px}}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 40px}
 @media (max-width:640px){.hero{grid-template-columns:1fr;padding:16px}.hero img{aspect-ratio:4/3}.ep{grid-template-columns:72px 1fr}.ep img{width:72px;height:96px}}
 </style>
@@ -87,83 +96,21 @@ for (const s of window.PORTAL.series) {
       <ul class="eps">${eps}</ul>
     </section>`);
 }
-// 2026-10-20 게임 코너: 퓨어데이 체스 (youtebe3/project/CHESS001 → chess/)
-// 2026-10-20 대표님: '장기랑 슈팅 버튼이 없어요' → 위 메뉴에 게임마다 버튼
-nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a><a href="#games-poker">포커 게임</a><a href="#games-puzzle">퍼즐 게임</a><a href="#games-ladder">사다리 게임</a>');
+// 2026-10-21 대표님: "게임이 계속 나열되니까 정신없어요 — 게임 버튼을 누르면 새 창에서 게임만 갤러리처럼"
+// → 게임 카드는 games/ (게임 갤러리) 로 옮기고, 포털에는 위 메뉴 버튼 하나 + 작은 안내 카드 하나 (둘 다 새 창)
+nav.insertAdjacentHTML('beforeend', '<a href="games/" target="_blank" rel="noopener" class="nav-games">🎮 게임 ↗</a>');
+const GAME_THUMBS = ["puzzle", "ladder", "poker", "shooter", "janggi", "chess"];
 main.insertAdjacentHTML('beforeend', `
   <section class="series game" id="games">
-    <div class="hero">
-      <img src="chess/assets/cover.jpg" alt="퓨어데이 체스 말 라인업">
-      <div>
-        <span class="tag">캐주얼 게임 · 체스</span>
-        <h2>퓨어데이 체스<em>PUREDAY CHESS</em></h2>
-        <p class="meta">빛 진영 vs 드래곤 군단 · 컴퓨터와 / 둘이서</p>
-        <p>조성민 박사 킹, 조아름 퀸, 조하임 나이트, 아퀼라, 견습 창병과 함께 큰 용의 드래곤 군단에 맞서요. 폰에서도 바로 둘 수 있어요.</p>
-        <a class="btn" href="chess/">체스 두기</a>
+    <a class="gallery" href="games/" target="_blank" rel="noopener">
+      <div class="thumbs">${GAME_THUMBS.map((g) => `<img src="${g}/assets/cover.jpg" alt="" loading="lazy">`).join("")}</div>
+      <div class="gtext">
+        <span class="tag">퓨어데이 게임</span>
+        <h2>게임 갤러리<em>PUREDAY GAMES</em></h2>
+        <p>퍼즐 · 사다리 · 포커 · 슈팅 · 장기 · 체스 — 새 창에서 골라 입장해요.</p>
+        <span class="btn">게임 갤러리 열기 ↗</span>
       </div>
-    </div>
-  </section>`);
-// 2026-10-20 게임 코너 추가: 퓨어데이 장기 (youtebe3/project/GP_GAMES_JANGGI → janggi/), 슈팅 「빛의 화살」 (GP_GAMES_SHOOTER → shooter/)
-main.insertAdjacentHTML('beforeend', `
-  <section class="series game" id="games-janggi">
-    <div class="hero">
-      <img src="janggi/assets/cover.jpg" alt="퓨어데이 장기 말 — 빛 진영과 드래곤 군단">
-      <div>
-        <span class="tag">캐주얼 게임 · 장기</span>
-        <h2>퓨어데이 장기<em>PUREDAY JANGGI</em></h2>
-        <p class="meta">빛 진영(초) vs 드래곤 군단(한) · 컴퓨터와 / 둘이서</p>
-        <p>조성민 박사 궁, 이마리·김미아 사, 조아름·조하임 차, 그리고 12사도가 신분 깃발을 들고 대왕용과 늑대개 군단에 맞서요. 상차림도 고를 수 있어요.</p>
-        <a class="btn" href="janggi/">장기 두기</a>
-      </div>
-    </div>
-  </section>
-  <section class="series game" id="games-shooter">
-    <div class="hero">
-      <img src="shooter/assets/cover.jpg" alt="빛의 화살 — 조아름과 대왕용">
-      <div>
-        <span class="tag">캐주얼 게임 · 슈팅</span>
-        <h2>빛의 화살<em>PUREDAY SHOOTER</em></h2>
-        <p class="meta">10단계 · 단계마다 중간보스 · 마지막은 대왕용</p>
-        <p>조아름이 빛의 화살로 드래곤 군단을 물리쳐요. 키보드는 방향키, 폰은 손가락으로 끌면 되고 화살은 자동으로 나가요.</p>
-        <a class="btn" href="shooter/">슈팅 시작</a>
-      </div>
-    </div>
-  </section>
-  <section class="series game" id="games-poker">
-    <div class="hero">
-      <img src="poker/assets/cover.jpg" alt="퓨어데이 포커 — 캐릭터들과 펼친 하트 로열 플러시">
-      <div>
-        <span class="tag">캐주얼 게임 · 포커</span>
-        <h2>퓨어데이 포커<em>PUREDAY HOLD'EM</em></h2>
-        <p class="meta">텍사스 홀덤 · 빛의 구슬(실제 돈 없음) · 5명 / 대왕용 테이블 7명</p>
-        <p>조하임·김미아·라합·늑대개 우두머리와 한 테이블에 앉아요. 처음이면 '포커 배우기'와 페이의 조언이 차근차근 알려 줘요.</p>
-        <a class="btn" href="poker/">포커 하기</a>
-      </div>
-    </div>
-  </section>
-  <section class="series game" id="games-puzzle">
-    <div class="hero">
-      <img src="puzzle/assets/cover.jpg" alt="퓨어데이 퍼즐 — 회차 장면들과 맞추는 중인 퍼즐 조각">
-      <div>
-        <span class="tag">캐주얼 게임 · 퍼즐</span>
-        <h2>퓨어데이 퍼즐<em>PUREDAY JIGSAW</em></h2>
-        <p class="meta">시즌1 프롤로그~16화 · 시즌2 1~3화 · 회차마다 네 장면</p>
-        <p>웹툰 장면을 직소 퍼즐로 맞춰요. 쉬움 20·30조각부터 고급 50·70조각까지, 밑그림·테두리 조각·힌트 도우미도 있어요.</p>
-        <a class="btn" href="puzzle/">퍼즐 맞추기</a>
-      </div>
-    </div>
-  </section>
-  <section class="series game" id="games-ladder">
-    <div class="hero">
-      <img src="ladder/assets/cover.jpg" alt="퓨어데이 사다리 — 당첨된 길이 빨간 선으로 표시된 사다리">
-      <div>
-        <span class="tag">캐주얼 게임 · 사다리타기</span>
-        <h2>퓨어데이 사다리<em>PUREDAY LADDER</em></h2>
-        <p class="meta">최대 20명 · 사다리는 매번 무작위 · 당첨은 빨간 선</p>
-        <p>이름과 당첨 개수만 정하면 사다리가 저절로 만들어져요. 이름을 누르면 길을 따라 내려가고, 당첨된 사람의 길은 빨간 선으로 남아요.</p>
-        <a class="btn" href="ladder/">사다리 타기</a>
-      </div>
-    </div>
+    </a>
   </section>`);
 </script>
 </body>
