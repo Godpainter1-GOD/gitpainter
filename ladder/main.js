@@ -4,7 +4,7 @@ const SAVE_KEY = "pureday-ladder-v1";
 const SVGNS = "http://www.w3.org/2000/svg";
 const PUREDAY = ["조아름", "조하임", "조성민 박사", "이마리", "김미아", "리웨이", "하루카", "디에고", "콰메", "라일라",
   "노아", "캐털린", "아마라", "루시아", "요나스", "마이클", "아퀼라", "페이", "타미", "루아"];
-const S = { n: 6, names: [], wins: 1, winText: "당첨", loseText: "꽝", sound: true };
+const S = { n: 6, names: [], wins: 1, winText: "당첨", loseText: "꽝", sound: true, res: null };   // res[칸] = { t: 글자, w: 당첨? }
 let L = null;   // 지금 사다리 { n, rows, rungs[row] = Set(왼쪽 기둥 번호), results[slot] = bool(당첨), traced: Set }
 
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* 저장 안 됨 */ } }
@@ -34,6 +34,11 @@ function drawSetup() {
   $("count").value = S.n; $("countVal").textContent = S.n;
   S.wins = Math.max(1, Math.min(S.n - 1, S.wins)); $("winVal").textContent = S.wins;
   $("winText").value = S.winText; $("loseText").value = S.loseText;
+  // 결과 칸 수를 인원에 맞춘다 (처음이면 '빠르게 채우기'대로, 늘어난 칸은 꽝)
+  if (!Array.isArray(S.res)) fillResults(true);
+  while (S.res.length < S.n) S.res.push({ t: S.loseText, w: false });
+  S.res.length = S.n;
+  drawResults();
   const box = $("names"), have = box.querySelectorAll("input").length;
   if (have !== S.n) {
     box.innerHTML = Array.from({ length: S.n }, (_, i) =>
@@ -43,6 +48,26 @@ function drawSetup() {
 $("count").oninput = () => { S.n = Number($("count").value); drawSetup(); save(); };
 document.querySelectorAll(".stepper [data-d]").forEach((b) => b.onclick = () => { S.n = Math.max(2, Math.min(20, S.n + Number(b.dataset.d))); drawSetup(); save(); });
 document.querySelectorAll(".stepper [data-w]").forEach((b) => b.onclick = () => { S.wins = Math.max(1, Math.min(S.n - 1, S.wins + Number(b.dataset.w))); drawSetup(); save(); });
+function fillResults(shuffle = true) {
+  S.res = Array.from({ length: S.n }, (_, i) => (i < S.wins ? { t: S.winText, w: true } : { t: S.loseText, w: false }));
+  if (shuffle) S.res.sort(() => Math.random() - 0.5);
+}
+function drawResults() {
+  $("results").innerHTML = S.res.map((r, i) => `<div class="res ${r.w ? "win" : ""}">
+    <input type="text" maxlength="10" data-r="${i}" value="${r.t.replace(/"/g, "&quot;")}" aria-label="${i + 1}번째 결과 칸 글자">
+    <button type="button" data-t="${i}" aria-pressed="${r.w}" title="눌러서 당첨/꽝 바꾸기">${r.w ? "🎉당첨" : "꽝"}</button></div>`).join("");
+}
+$("results").oninput = (e) => { const i = Number(e.target.dataset.r); if (!isNaN(i)) { S.res[i].t = e.target.value.trim(); save(); } };
+$("results").onclick = (e) => {
+  const b = e.target.closest("button[data-t]"); if (!b) return;
+  const r = S.res[Number(b.dataset.t)];
+  r.w = !r.w;
+  // 글자를 안 바꾼 칸이면 당첨/꽝 글자도 따라 바꿔 준다
+  if (r.w && r.t === S.loseText) r.t = S.winText; else if (!r.w && r.t === S.winText) r.t = S.loseText;
+  save(); drawResults();
+};
+$("btnFill").onclick = () => { fillResults(true); save(); drawResults(); };
+$("btnShuffle").onclick = () => { S.res.sort(() => Math.random() - 0.5); save(); drawResults(); };
 $("names").oninput = (e) => { const i = Number(e.target.dataset.i); S.names[i] = e.target.value.trim(); save(); };
 $("winText").oninput = () => { S.winText = $("winText").value.trim() || "당첨"; save(); };
 $("loseText").oninput = () => { S.loseText = $("loseText").value.trim() || "꽝"; save(); };
@@ -68,10 +93,9 @@ function makeLadder(n) {
       if (!rungs[r].has(c) && !rungs[r].has(c - 1) && !rungs[r].has(c + 1)) { rungs[r].add(c); cnt++; }
     }
   }
-  const results = Array(n).fill(false);
-  const slots = [...Array(n).keys()].sort(() => Math.random() - 0.5).slice(0, S.wins);
-  for (const s of slots) results[s] = true;
-  return { n, rows, rungs, results, traced: new Map(), names: Array.from({ length: n }, (_, i) => nameFor(i)) };
+  // 결과 칸은 준비 화면에서 고른 그대로 (글자 · 당첨 여부)
+  const results = S.res.map((r) => !!r.w), labels = S.res.map((r) => r.t || (r.w ? S.winText : S.loseText));
+  return { n, rows, rungs, results, labels, traced: new Map(), names: Array.from({ length: n }, (_, i) => nameFor(i)) };
 }
 // 출발 기둥 c 에서 내려가는 길: 지나는 점들과 도착 칸
 function route(c) {
@@ -144,8 +168,8 @@ async function trace(c, fast = false) {
   p.setAttribute("class", "path " + (win ? "win" : "lose"));
   if (win) G.paths.appendChild(p);   // 빨간 선을 위로
   showDone(c, true);
-  if (win) { tone([523, 659, 784, 1046], 0.11, 0.07); say(`🎉 ${L.names[c]} — ${S.winText}!`); }
-  else { tone([330], 0.08, 0.04); say(`${L.names[c]} — ${S.loseText}`); }
+  if (win) { tone([523, 659, 784, 1046], 0.11, 0.07); say(`🎉 ${L.names[c]} — ${L.labels[end]}!`); }
+  else { tone([330], 0.08, 0.04); say(`${L.names[c]} — ${L.labels[end]}`); }
 }
 function showDone(c, fresh) {
   const end = L.traced.get(c), win = L.results[end];
@@ -153,7 +177,7 @@ function showDone(c, fresh) {
   nm.classList.add("done"); if (win) nm.classList.add("winner");
   sl.classList.add("open", win ? "win" : "lose");
   const [t1, t2] = sl.querySelectorAll("text");
-  t1.textContent = fit(win ? S.winText : S.loseText, Math.min(G.colW - 6, 100)); t2.textContent = fit(L.names[c], Math.min(G.colW - 6, 100));
+  t1.textContent = fit(L.labels[end], Math.min(G.colW - 6, 100)); t2.textContent = fit(L.names[c], Math.min(G.colW - 6, 100));
   if (!fresh) {   // 다시 그릴 때(화면 크기 바뀜) 길도 다시
     const p = el("path", { class: "path " + (win ? "win" : "lose"), d: pathD(route(c).pts) }, G.paths);
     if (win) G.paths.appendChild(p);
@@ -168,11 +192,11 @@ function updateButtons() {
 }
 function showSummary() {
   const rows = [...Array(L.n).keys()].map((c) => ({ c, end: L.traced.get(c) })).sort((a, b) => L.results[b.end] - L.results[a.end] || a.c - b.c);
-  const winners = rows.filter((r) => L.results[r.end]).map((r) => L.names[r.c]);
-  $("summary").innerHTML = `<h3>🎉 ${S.winText}: ${winners.join(", ")}</h3><ul>${rows.map((r) =>
-    `<li class="${L.results[r.end] ? "w" : ""}">${L.names[r.c]} → ${L.results[r.end] ? S.winText : S.loseText}</li>`).join("")}</ul>`;
+  const winners = rows.filter((r) => L.results[r.end]).map((r) => `${L.names[r.c]}(${L.labels[r.end]})`);
+  $("summary").innerHTML = `<h3>🎉 당첨: ${winners.join(", ") || "없음"}</h3><ul>${rows.map((r) =>
+    `<li class="${L.results[r.end] ? "w" : ""}">${L.names[r.c]} → ${L.labels[r.end]}</li>`).join("")}</ul>`;
   $("summary").hidden = false;
-  say(`다 탔어요! ${S.winText}은(는) ${winners.join(", ")}! 빨간 선이 당첨된 길이에요.`);
+  say(winners.length ? `다 탔어요! 당첨: ${winners.join(", ")} — 빨간 선이 당첨된 길이에요.` : "다 탔어요! 이번엔 당첨 칸이 없었어요.");
 }
 async function run(list, fast) {
   if (busy) return;
@@ -190,7 +214,7 @@ function startLadder() {
   L = makeLadder(S.n);
   $("setup").hidden = true; $("play").hidden = false; $("summary").hidden = true;
   drawBoard(); updateButtons();
-  say(pick(["이름을 누르면 그 사람의 사다리를 타요!", `${S.winText}은(는) ${S.wins}개! 누가 될까요?`, "사다리는 방금 무작위로 새로 만들었어요."]));
+  say(pick(["이름을 누르면 그 사람의 사다리를 타요!", `당첨 칸은 ${S.res.filter((r) => r.w).length}개! 누가 될까요?`, "사다리는 방금 무작위로 새로 만들었어요."]));
   tone([660, 880], 0.06);
 }
 $("btnMake").onclick = () => { S.names = [...$("names").querySelectorAll("input")].map((i) => i.value.trim()); save(); startLadder(); };
@@ -204,7 +228,7 @@ $("btnSound").textContent = S.sound ? "🔊" : "🔇";
 drawSetup();
 // 개발용: #demo=20 → 20명 사다리 바로 만들고 모두 타기
 const hp = new URLSearchParams(location.hash.slice(1));
-if (hp.has("demo")) { S.n = Number(hp.get("demo")) || 20; S.wins = Number(hp.get("wins")) || 3; S.names = PUREDAY.slice(0, 20); startLadder(); if (!hp.has("still")) setTimeout(() => $("btnAll").click(), 300); }
+if (hp.has("demo")) { S.n = Number(hp.get("demo")) || 20; S.wins = Number(hp.get("wins")) || 3; S.names = PUREDAY.slice(0, 20); fillResults(true); startLadder(); if (!hp.has("still")) setTimeout(() => $("btnAll").click(), 300); }
 
 // ---------------------------------------------------------------- 키보드 (2026-10-21 대표님: "마우스로 하니까 너무 어려워요 · 키 설정 옵션")
 // 동작마다 키를 바꿀 수 있다. 설정은 localStorage 에 저장

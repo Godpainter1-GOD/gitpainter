@@ -77,3 +77,15 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin-left: 6px;
 .keyhint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 8px; }
 #board .name.sel rect { stroke: var(--gold); stroke-width: 4; }
 #board .name.sel text { fill: var(--gold); }
+
+/* 결과 칸 편집 (2026-10-21) */
+.results { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.res { display: flex; gap: 4px; }
+.res input { flex: 1; min-width: 0; min-height: 38px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+.res.win input { border-color: var(--red); background: #fff5f5; color: var(--red); font-weight: 800; }
+.res button { flex: none; width: 58px; border-radius: 8px; border: 1px solid var(--line); background: #f3efe6; font-size: 12px; font-weight: 800; color: var(--muted); }
+.res.win button { background: var(--red); border-color: var(--red); color: #fff; }
+.fill { margin-top: 10px; background: #faf6ee; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; }
+.fill-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; font-weight: 700; }
+.row .fill-row input[type=text] { width: 96px; min-height: 36px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: #fff; margin: 0; }
+.fill-row .stepper button { width: 34px; height: 34px; font-size: 18px; }
