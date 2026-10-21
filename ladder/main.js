@@ -134,7 +134,7 @@ async function trace(c, fast = false) {
   L.traced.set(c, end);
   const p = el("path", { class: "path run", d: pathD(pts), "data-c": c }, G.paths);
   const len = p.getTotalLength();
-  const dur = fast ? 900 : Math.min(2600, 900 + len * 2.2);
+  const dur = fast ? 800 : Math.min(1700, 700 + len * 1.4);
   p.style.strokeDasharray = len; p.style.strokeDashoffset = len;
   // 기둥 안에서 보이게 가운데로 스크롤 (넓은 사다리)
   const sc = $("boardScroll"); if (!fast && sc.scrollWidth > sc.clientWidth) sc.scrollTo({ left: X(c) - sc.clientWidth / 2, behavior: "smooth" });
@@ -273,6 +273,15 @@ $("keysClose").onclick = () => { waiting = null; $("keysModal").hidden = true; s
 $("keysReset").onclick = () => { KEYS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k])); saveKeys(); waiting = null; drawKeyList(); showHints(); };
 $("keyList").onclick = (e) => { const b = e.target.closest("button"); if (b) { waiting = b.dataset.a; drawKeyList(); } };
 
+let pendingAct = null;
+function doAct(act) {
+  if (act === "go") { if (L && !L.traced.has(cursor)) run([cursor], false).then(() => moveCursor(1)); }
+  else if (act === "one") $("btnOne").click();
+  else if (act === "all") $("btnAll").click();
+  else if (act === "remake") { $("btnRemake").click(); cursor = 0; markCursor(); }
+  else if (act === "back") $("btnBack").click();
+}
+setInterval(() => { if (pendingAct && !busy) { const a = pendingAct; pendingAct = null; doAct(a); } }, 80);
 addEventListener("keydown", (e) => {
   // 1) 키 설정 중: 누른 키를 그 동작에 (다른 동작이 쓰던 키면 서로 바꾼다)
   if (!$("keysModal").hidden) {
@@ -297,12 +306,10 @@ addEventListener("keydown", (e) => {
   // 3) 사다리 화면
   if ($("play").hidden || typing) return;
   e.preventDefault();
+  // 사다리가 내려가는 중에 누른 키는 버리지 않고, 끝나자마자 실행한다
+  if (busy && !["prev", "next"].includes(act)) { pendingAct = act; return; }
   if (act === "prev") moveCursor(-1);
   else if (act === "next") moveCursor(1);
-  else if (act === "go") { if (!busy && L && !L.traced.has(cursor)) run([cursor], false).then(() => moveCursor(1)); }
-  else if (act === "one") $("btnOne").click();
-  else if (act === "all") $("btnAll").click();
-  else if (act === "remake") { $("btnRemake").click(); cursor = 0; markCursor(); }
-  else if (act === "back") $("btnBack").click();
+  else doAct(act);
 });
 showHints();
