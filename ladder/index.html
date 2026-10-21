@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>퓨어데이 사다리</title>
+<meta name="description" content="최대 20명까지, 사다리가 무작위로 만들어지는 사다리타기 — 당첨된 사람의 길은 빨간 선으로">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="logo"><b>퓨어데이</b> 사다리<small>PUREDAY LADDER</small></div>
+    <button class="icon" id="btnSound" aria-label="소리 끄기/켜기">🔊</button>
+  </header>
+
+  <!-- 1. 준비 -->
+  <section class="setup" id="setup">
+    <div class="row">
+      <label class="glabel" for="count">참가 인원 <b id="countVal">6</b>명 <small>(2~20명)</small></label>
+      <div class="stepper">
+        <button type="button" data-d="-1" aria-label="한 명 빼기">−</button>
+        <input type="range" id="count" min="2" max="20" value="6">
+        <button type="button" data-d="1" aria-label="한 명 더하기">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="glabel">참가자 이름</span>
+      <div class="names" id="names"></div>
+      <div class="quick">
+        <button type="button" id="btnPureday">퓨어데이 친구들로 채우기</button>
+        <button type="button" id="btnNumber">번호로 채우기</button>
+      </div>
+    </div>
+    <div class="row two">
+      <div>
+        <label class="glabel" for="winCount">당첨 개수</label>
+        <div class="stepper small">
+          <button type="button" data-w="-1" aria-label="당첨 하나 빼기">−</button>
+          <b id="winVal">1</b>
+          <button type="button" data-w="1" aria-label="당첨 하나 더하기">+</button>
+        </div>
+      </div>
+      <div>
+        <label class="glabel" for="winText">당첨 이름</label>
+        <input type="text" id="winText" value="당첨" maxlength="8">
+        <label class="glabel" for="loseText">꽝 이름</label>
+        <input type="text" id="loseText" value="꽝" maxlength="8">
+      </div>
+    </div>
+    <button class="primary" id="btnMake">사다리 만들기</button>
+    <p class="note">사다리 가로줄은 매번 무작위로 새로 만들어져요. 당첨된 사람의 길은 <b class="red">빨간 선</b>으로 남아요.</p>
+  </section>
+
+  <!-- 2. 사다리 -->
+  <section class="play" id="play" hidden>
+    <div class="bubble" id="bubble"><span class="who">페이</span><span id="bubbleText">이름을 누르면 그 사람의 사다리를 타요!</span></div>
+    <div class="board-scroll" id="boardScroll"><svg id="board" aria-label="사다리"></svg></div>
+    <div class="actions">
+      <button id="btnOne" class="primary">다음 사람 ▶</button>
+      <button id="btnAll" class="primary alt">한꺼번에 모두</button>
+    </div>
+    <div class="actions">
+      <button id="btnRemake" class="ghost">🔀 사다리 새로 만들기</button>
+      <button id="btnBack" class="ghost">처음으로</button>
+    </div>
+    <div class="summary" id="summary" hidden></div>
+  </section>
+  <p class="credit">『퓨어데이』 Godpainter · 사다리는 매번 무작위</p>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

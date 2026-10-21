@@ -89,7 +89,7 @@ for (const s of window.PORTAL.series) {
 }
 // 2026-10-20 게임 코너: 퓨어데이 체스 (youtebe3/project/CHESS001 → chess/)
 // 2026-10-20 대표님: '장기랑 슈팅 버튼이 없어요' → 위 메뉴에 게임마다 버튼
-nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a><a href="#games-poker">포커 게임</a><a href="#games-puzzle">퍼즐 게임</a>');
+nav.insertAdjacentHTML('beforeend', '<a href="#games">체스 게임</a><a href="#games-janggi">장기 게임</a><a href="#games-shooter">슈팅 게임</a><a href="#games-poker">포커 게임</a><a href="#games-puzzle">퍼즐 게임</a><a href="#games-ladder">사다리 게임</a>');
 main.insertAdjacentHTML('beforeend', `
   <section class="series game" id="games">
     <div class="hero">
@@ -150,6 +150,18 @@ main.insertAdjacentHTML('beforeend', `
         <p class="meta">시즌1 프롤로그~16화 · 시즌2 1~3화 · 회차마다 네 장면</p>
         <p>웹툰 장면을 직소 퍼즐로 맞춰요. 쉬움 20·30조각부터 고급 50·70조각까지, 밑그림·테두리 조각·힌트 도우미도 있어요.</p>
         <a class="btn" href="puzzle/">퍼즐 맞추기</a>
+      </div>
+    </div>
+  </section>
+  <section class="series game" id="games-ladder">
+    <div class="hero">
+      <img src="ladder/assets/cover.jpg" alt="퓨어데이 사다리 — 당첨된 길이 빨간 선으로 표시된 사다리">
+      <div>
+        <span class="tag">캐주얼 게임 · 사다리타기</span>
+        <h2>퓨어데이 사다리<em>PUREDAY LADDER</em></h2>
+        <p class="meta">최대 20명 · 사다리는 매번 무작위 · 당첨은 빨간 선</p>
+        <p>이름과 당첨 개수만 정하면 사다리가 저절로 만들어져요. 이름을 누르면 길을 따라 내려가고, 당첨된 사람의 길은 빨간 선으로 남아요.</p>
+        <a class="btn" href="ladder/">사다리 타기</a>
       </div>
     </div>
   </section>`);
