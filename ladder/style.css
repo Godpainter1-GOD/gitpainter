@@ -89,3 +89,5 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin-left: 6px;
 .fill-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; font-weight: 700; }
 .row .fill-row input[type=text] { width: 96px; min-height: 36px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: #fff; margin: 0; }
 .fill-row .stepper button { width: 34px; height: 34px; font-size: 18px; }
+
+#bulk { width: 100%; min-height: 70px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font: 500 14px/1.5 var(--font); resize: vertical; }

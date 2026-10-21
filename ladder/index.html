@@ -51,9 +51,12 @@
       </div>
     </div>
     <div class="row">
-      <span class="glabel">결과 칸 <small>(사다리 맨 아래에 놓여요 — 글자를 고치고, 칸마다 🎉당첨 / 꽝을 눌러 골라요)</small></span>
+      <span class="glabel">결과 칸 · 보상 <small>(사다리 맨 아래에 놓여요 — 칸마다 보상을 직접 써요. 꽝 대신 무엇이든 OK! 🎉당첨으로 고른 칸은 빨간 선)</small></span>
       <div class="results" id="results"></div>
       <div class="fill">
+        <label class="glabel" for="bulk">보상 목록 한 번에 쓰기 <small>(줄바꿈이나 쉼표로 나눠요 · 앞에 * 를 붙이면 🎉당첨 칸)</small></label>
+        <textarea id="bulk" rows="3" placeholder="*치킨, 커피, 아이스크림, 꽝, 청소 당번, 다시 한 번"></textarea>
+        <div class="quick" style="margin:6px 0 10px"><button type="button" id="btnBulk">목록대로 결과 칸 채우기</button></div>
         <span class="glabel">빠르게 채우기</span>
         <div class="fill-row">
           <span>당첨</span>
@@ -64,7 +67,7 @@
           </div>
           <span>개 ·</span>
           <input type="text" id="winText" value="당첨" maxlength="10" aria-label="당첨 칸 글자" title="당첨 칸에 쓸 글자">
-          <input type="text" id="loseText" value="꽝" maxlength="10" aria-label="꽝 칸 글자" title="꽝 칸에 쓸 글자">
+          <input type="text" id="loseText" value="꽝" maxlength="10" aria-label="나머지 칸 글자" title="나머지 칸에 쓸 글자" placeholder="나머지 칸">
         </div>
         <div class="quick">
           <button type="button" id="btnFill">이대로 결과 칸 채우기</button>

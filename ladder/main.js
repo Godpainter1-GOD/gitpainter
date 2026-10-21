@@ -55,7 +55,7 @@ function fillResults(shuffle = true) {
 function drawResults() {
   $("results").innerHTML = S.res.map((r, i) => `<div class="res ${r.w ? "win" : ""}">
     <input type="text" maxlength="10" data-r="${i}" value="${r.t.replace(/"/g, "&quot;")}" aria-label="${i + 1}번째 결과 칸 글자">
-    <button type="button" data-t="${i}" aria-pressed="${r.w}" title="눌러서 당첨/꽝 바꾸기">${r.w ? "🎉당첨" : "꽝"}</button></div>`).join("");
+    <button type="button" data-t="${i}" aria-pressed="${r.w}" title="눌러서 🎉당첨 / 일반 바꾸기">${r.w ? "🎉당첨" : "일반"}</button></div>`).join("");
 }
 $("results").oninput = (e) => { const i = Number(e.target.dataset.r); if (!isNaN(i)) { S.res[i].t = e.target.value.trim(); save(); } };
 $("results").onclick = (e) => {
@@ -65,6 +65,19 @@ $("results").onclick = (e) => {
   // 글자를 안 바꾼 칸이면 당첨/꽝 글자도 따라 바꿔 준다
   if (r.w && r.t === S.loseText) r.t = S.winText; else if (!r.w && r.t === S.winText) r.t = S.loseText;
   save(); drawResults();
+};
+// 보상 목록 한 번에: 줄바꿈·쉼표로 나눈 순서대로 칸을 채운다. 앞에 * 가 있으면 당첨 칸
+$("btnBulk").onclick = () => {
+  const items = $("bulk").value.split(/[\n,，]+/).map((x) => x.trim()).filter(Boolean);
+  if (!items.length) { $("bulk").focus(); return; }
+  if (items.length > S.n && items.length <= 20) { S.n = items.length; }   // 보상이 더 많으면 인원도 늘린다(최대 20)
+  S.res = Array.from({ length: S.n }, (_, i) => {
+    const it = items[i];
+    if (!it) return S.res[i] || { t: S.loseText, w: false };
+    const win = /^[*＊🎉]/.test(it);
+    return { t: it.replace(/^[*＊🎉]+\s*/, "").slice(0, 10), w: win };
+  });
+  save(); $("names").innerHTML = ""; drawSetup();
 };
 $("btnFill").onclick = () => { fillResults(true); save(); drawResults(); };
 $("btnShuffle").onclick = () => { S.res.sort(() => Math.random() - 0.5); save(); drawResults(); };
@@ -319,6 +332,7 @@ addEventListener("keydown", (e) => {
   }
   const act = Object.keys(KEYS).find((a) => KEYS[a] === e.code);
   if (!act || e.repeat) return;
+  if (e.target.tagName === "TEXTAREA") return;   // 보상 목록 칸에서는 Enter = 줄바꿈
   const typing = e.target.tagName === "INPUT" && e.target.type === "text";
   // 2) 준비 화면
   if (!$("setup").hidden) {
