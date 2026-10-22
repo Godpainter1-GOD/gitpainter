@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>퓨어데이 지렁이</title>
+<meta name="description" content="『조아름의 퓨어데이』 지렁이 진군 — 픽셀 캐릭터가 넓은 들판을 달리며 빛의 구슬을 모아 강해지고, 어둠의 군단(졸개부터 장군·대왕용까지)과 맞서요. 스와이프 조종·질주">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="hud" id="hud" hidden>
+    <div class="row1">
+      <button id="btnMenu" aria-label="일시정지·메뉴">☰</button>
+      <span id="label"></span>
+      <span id="lives" aria-label="남은 하트"></span>
+      <button id="btnSound" aria-label="소리">🔊</button>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="row2"><span id="info"></span><span id="wave"></span></div>
+  </div>
+  <div class="field" id="field"><canvas id="cv" aria-label="지렁이 진군 게임 화면"></canvas><div class="banner" id="banner" hidden></div></div>
+  <div class="pad" id="pad" hidden>
+    <div class="hint">화면 아무 데나 누르고 끌면 그쪽으로 가요<br><small>키보드 ←↑→↓ / WASD · Space 질주</small></div>
+    <button id="btnDash" aria-label="질주">⚡<small>질주</small><i id="stam"></i></button>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+  <div class="screen" id="screen"></div>
+</div>
+<script type="module" src="main.js?v=2"></script>
+</body>
+</html>
