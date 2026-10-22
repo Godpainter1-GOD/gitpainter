@@ -38,7 +38,7 @@ button { font-family: var(--font); cursor: pointer; }
 .slot .cap { position: absolute; left: 50%; transform: translate(-50%, -50%) scale(0); width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #3a2410; font: 900 15px/26px var(--font); text-align: center; transition: transform .25s; box-shadow: 0 2px 6px rgba(0, 0, 0, .5); }
 .slot.done .cap { transform: translate(-50%, -50%) scale(1); }
 
-.nut { position: absolute; width: var(--nutW); height: var(--nutH); transition: left .22s ease, top .22s ease; will-change: left, top;
+.nut { position: absolute; pointer-events: none;   /* 2026-10-22 대표님: 마우스로 볼트가 안 눌림 → 너트가 클릭을 가로채던 것, 클릭이 아래 볼트 칸으로 가게 */ width: var(--nutW); height: var(--nutH); transition: left .22s ease, top .22s ease; will-change: left, top;
   clip-path: polygon(22% 0, 78% 0, 100% 50%, 78% 100%, 22% 100%, 0 50%);
   background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, #fff) 0%, var(--c) 45%, color-mix(in srgb, var(--c) 65%, #000) 100%); }
 .nut::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34%; height: 54%; transform: translate(-50%, -50%); border-radius: 50%;

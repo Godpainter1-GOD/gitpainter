@@ -294,7 +294,12 @@ function resize() {
   b.style.transform = `scale(${s})`;
   b.style.left = (r.width - BW * s) / 2 + "px"; b.style.top = (r.height - BH * s) / 2 + "px";
 }
-$("board").addEventListener("pointerdown", (e) => { const s = e.target.closest(".slot"); if (s) { e.preventDefault(); tapBolt(Number(s.dataset.b)); } });
+$("board").addEventListener("pointerdown", (e) => {
+  // 2026-10-22: 너트 위를 눌러도 되게 — 요소가 아니라 판 좌표로 볼트를 찾는다
+  const r = $("board").getBoundingClientRect(), x = (e.clientX - r.left) / (r.width / BW), y = (e.clientY - r.top) / (r.height / BH);
+  const b = L.pos.findIndex((p) => x >= p.x && x < p.x + L.slotW && y >= p.y && y < p.y + L.rowH);
+  if (b >= 0) { e.preventDefault(); tapBolt(b); }
+});
 $("btnUndo").onclick = undo; $("btnHint").onclick = hint; $("btnExtra").onclick = extraBolt;
 $("btnMenu").onclick = pauseMenu;
 $("btnSound").onclick = () => { SAVE.sound = !SAVE.sound; save(); hud(); };
