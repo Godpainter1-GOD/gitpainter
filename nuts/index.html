@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>퓨어데이 볼트·너트</title>
+<meta name="description" content="『조아름의 퓨어데이』 볼트·너트 색 맞추기 — 200단계. 같은 색 너트를 한 볼트에 모으세요. 조아름·조하임·김미아·조성민 박사·아퀼라가 챕터마다 함께해요">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="hud" id="hud" hidden>
+    <div class="row1">
+      <button id="btnMenu" aria-label="메뉴">☰</button>
+      <span id="levelName"></span>
+      <button id="btnSound" aria-label="소리">🔊</button>
+    </div>
+    <div class="row2"><img id="guideImg" alt=""><span id="guideSay"></span></div>
+    <div class="row3"><span>수 <b id="moves">0</b> / 목표 <b id="par">0</b></span><span id="stars"></span></div>
+  </div>
+  <div class="boardWrap" id="boardWrap"><div class="board" id="board" aria-label="볼트 판"></div></div>
+  <div class="tools" id="tools" hidden>
+    <button id="btnUndo"><span>↩</span>되돌리기</button>
+    <button id="btnHint"><span>💡</span>힌트 <i id="hintN">3</i></button>
+    <button id="btnExtra"><span>➕</span>볼트 추가 <i id="extraN">1</i></button>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+  <div class="screen" id="screen"></div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

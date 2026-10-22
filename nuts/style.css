@@ -1,0 +1,83 @@
+/* 퓨어데이 볼트·너트 — 9:16 세로 틀, 판은 논리 400×560 을 scale 로 맞춤 */
+:root { --gold: #ffd34a; --font: "Pretendard", "Noto Sans KR", system-ui, sans-serif; --nutW: 60px; --nutH: 27px; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #0f0d16; overflow: hidden; touch-action: manipulation; }
+body { display: grid; place-items: center; font-family: var(--font); color: #fff; user-select: none; -webkit-user-select: none; }
+[hidden] { display: none !important; }
+button { font-family: var(--font); cursor: pointer; }
+.wrap { position: relative; height: min(100dvh, calc(100vw * 16 / 9)); aspect-ratio: 9 / 16; max-width: 100vw; overflow: hidden; border-radius: 10px;
+  background: radial-gradient(120% 70% at 50% 0%, #2a2440 0%, #141120 55%, #0f0d16 100%); display: flex; flex-direction: column; }
+
+/* 위 정보줄 */
+.hud { padding: 8px 12px 4px; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); flex: none; }
+.hud .row1 { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 800; }
+.hud .row1 button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .4); background: rgba(0, 0, 0, .35); color: #fff; font-size: 15px; }
+.hud .row2 { display: flex; align-items: center; gap: 8px; margin-top: 6px; min-height: 36px; }
+.hud .row2 img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; object-position: center 12%; background: #fff7e0; border: 2px solid var(--gold); flex: none; }
+.hud .row2 span { font-size: 12.5px; line-height: 1.35; opacity: .92; background: rgba(255, 255, 255, .08); border-radius: 10px; padding: 5px 10px; flex: 1; }
+.hud .row3 { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-top: 6px; opacity: .9; }
+.hud .row3 b { font-size: 16px; color: var(--gold); }
+.hud .row3 #stars { letter-spacing: 2px; font-size: 15px; }
+
+/* 판 */
+.boardWrap { position: relative; width: 100%; flex: 1; min-height: 0; }
+.board { position: absolute; left: 0; top: 0; width: 400px; height: 560px; transform-origin: 0 0; }
+.slot { position: absolute; cursor: pointer; }
+.bolt { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 8px; transition: background .2s; }
+.slot:hover .bolt { background: rgba(255, 255, 255, .04); }
+.slot.sel .bolt { background: rgba(255, 211, 74, .1); }
+.slot.hint .bolt { background: rgba(127, 211, 255, .18); box-shadow: inset 0 0 0 2px #7fd3ff; animation: blink .5s 4; }
+.slot.bad .bolt { animation: shake .25s; }
+@keyframes blink { 50% { box-shadow: inset 0 0 0 2px transparent; } }
+@keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.shaft { position: absolute; left: 50%; transform: translateX(-50%); width: 18%; border-radius: 4px 4px 0 0;
+  background: repeating-linear-gradient(180deg, #b5b9c6 0 3px, #7d8292 3px 5px, #9ea3b3 5px 7px); box-shadow: inset 2px 0 2px rgba(255, 255, 255, .35), inset -2px 0 3px rgba(0, 0, 0, .35); }
+.base { position: absolute; left: 10%; width: 80%; height: 12px; border-radius: 6px; background: linear-gradient(#c9cdd8, #7c8090); box-shadow: 0 3px 6px rgba(0, 0, 0, .5); }
+.slot.done .shaft { background: repeating-linear-gradient(180deg, #ffe9a3 0 3px, #d9a93a 3px 5px, #f4d06f 5px 7px); }
+.slot.done .base { background: linear-gradient(#ffe9a3, #c9962a); }
+.slot .cap { position: absolute; left: 50%; transform: translate(-50%, -50%) scale(0); width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #3a2410; font: 900 15px/26px var(--font); text-align: center; transition: transform .25s; box-shadow: 0 2px 6px rgba(0, 0, 0, .5); }
+.slot.done .cap { transform: translate(-50%, -50%) scale(1); }
+
+.nut { position: absolute; width: var(--nutW); height: var(--nutH); transition: left .22s ease, top .22s ease; will-change: left, top;
+  clip-path: polygon(22% 0, 78% 0, 100% 50%, 78% 100%, 22% 100%, 0 50%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, #fff) 0%, var(--c) 45%, color-mix(in srgb, var(--c) 65%, #000) 100%); }
+.nut::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34%; height: 54%; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #2a2630, #15131a 70%); box-shadow: 0 1px 0 rgba(255, 255, 255, .35); }
+.nut.lift { z-index: 3; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .5)); }
+
+/* 아래 도우미 */
+.tools { display: flex; gap: 8px; padding: 6px 12px 12px; flex: none; }
+.tools button { flex: 1; min-height: 52px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .09); color: #fff; font: 800 13px/1.2 var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.tools button span { font-size: 17px; }
+.tools button i { font-style: normal; color: var(--gold); }
+.tools button:disabled { opacity: .35; cursor: default; }
+.toast { position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%); background: rgba(20, 16, 40, .9); border: 1px solid var(--gold); border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 700; white-space: nowrap; z-index: 4; pointer-events: none; }
+
+/* 화면(제목·단계 고르기·클리어) */
+.screen { position: absolute; inset: 0; background: rgba(12, 10, 22, .9); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 14px; overflow-y: auto; z-index: 5; text-align: center; border-radius: 10px; }
+.screen h1 { margin: 6px 0 0; font-size: 30px; line-height: 1.15; } .screen h1 b { color: var(--gold); }
+.screen h2 { margin: 0; font-size: 22px; color: var(--gold); }
+.screen p { margin: 0; font-size: 14px; opacity: .9; line-height: 1.5; }
+.screen .how { font-size: 12px !important; opacity: .72 !important; }
+.big { min-width: 210px; min-height: 52px; border: 0; border-radius: 14px; background: linear-gradient(#ffd34a, #f0a64a); color: #3a2410; font: 900 19px var(--font); box-shadow: 0 4px 0 #b06a1e; }
+.ghost { min-width: 210px; min-height: 44px; border: 1px solid rgba(255, 255, 255, .5); border-radius: 12px; background: transparent; color: #fff; font: 700 15px var(--font); }
+.cast { display: flex; justify-content: center; gap: 4px; margin: 4px 0; }
+.cast img { width: 17%; max-width: 72px; aspect-ratio: 1; object-fit: cover; object-position: center 8%; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); background: #fff7e0; }
+.cast img.on { border-color: var(--gold); }
+.hero { width: 42%; max-width: 170px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .6)); }
+.demo { display: flex; gap: 4px; justify-content: center; margin: 2px 0 4px; }
+.demo i { display: inline-block; width: 34px; height: 15px; clip-path: polygon(22% 0, 78% 0, 100% 50%, 78% 100%, 22% 100%, 0 50%); background: var(--c); }
+.chapters { width: 100%; display: grid; gap: 10px; text-align: left; }
+.chap { background: rgba(255, 255, 255, .07); border-radius: 12px; padding: 8px; }
+.chap .head { display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; align-items: center; margin-bottom: 6px; }
+.chap .head img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: center 12%; background: #fff7e0; border: 2px solid var(--gold); }
+.chap .head b { font-size: 14px; display: block; } .chap .head small { opacity: .7; font-size: 11px; }
+.chap .head .sum { font-size: 12px; color: var(--gold); font-weight: 800; }
+.chap .lv { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.chap .lv button { min-height: 34px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .1); color: #fff; font: 800 12px/1.1 var(--font); padding: 2px 0; }
+.chap .lv button small { display: block; font-size: 8px; letter-spacing: -1px; color: var(--gold); line-height: 1; }
+.chap .lv button.done { background: rgba(255, 211, 74, .22); border-color: var(--gold); }
+.chap .lv button.next { outline: 2px solid #7fd3ff; }
+.chap .lv button:disabled { opacity: .28; cursor: default; }
+.result { font-size: 34px; letter-spacing: 4px; color: var(--gold); text-shadow: 0 0 18px rgba(255, 211, 74, .6); }
+.bubble { position: relative; background: rgba(255, 255, 255, .1); border-radius: 14px; padding: 10px 14px; font-size: 14px; line-height: 1.5; max-width: 300px; }
