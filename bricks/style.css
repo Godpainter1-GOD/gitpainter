@@ -1,0 +1,41 @@
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0f0d16;color:#fff;font-family:"Pretendard","Noto Sans KR",system-ui,sans-serif;-webkit-user-select:none;user-select:none;overscroll-behavior:none;touch-action:none}
+.wrap{position:relative;width:100%;height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;background:#0f0d16}
+.hud{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px;background:linear-gradient(#221c38,#0f0d16)}
+.hud #label{flex:1;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud #label b{color:#ffd34a}
+.hud #lives{font-size:15px;letter-spacing:1px;color:#ff6b8a}
+.hud button{width:32px;height:30px;border:0;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-size:15px;cursor:pointer}
+.field{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f0d16}
+canvas{display:block;max-width:100%;max-height:100%;aspect-ratio:9/16;touch-action:none;image-rendering:auto}
+.banner{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);text-align:center;font-size:30px;font-weight:900;color:#ffd34a;text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 18px rgba(0,0,0,.5);pointer-events:none;animation:pop .25s ease-out;white-space:nowrap}
+.banner small{display:block;font-size:14px;color:#fff;font-weight:700;margin-top:4px;white-space:normal;max-width:300px}
+.banner.red{color:#ff8aa0}
+@keyframes pop{from{transform:translate(-50%,-50%) scale(.6);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.pad{flex:0 0 auto;padding:8px 14px 12px}
+.pad .hint{font-size:13px;line-height:1.45;text-align:center;opacity:.9}
+.pad .hint small{opacity:.7;font-size:11px}
+.toast{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);background:rgba(0,0,0,.75);padding:8px 14px;border-radius:12px;font-size:13px;max-width:92%;text-align:center;pointer-events:none;z-index:5}
+.screen{position:absolute;inset:0;background:rgba(10,8,20,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center;z-index:10;overflow:auto}
+.screen[hidden]{display:none}
+.screen h1{margin:0;font-size:30px;line-height:1.15;text-shadow:0 3px 0 rgba(0,0,0,.4)}
+.screen h1 b{color:#ffd34a}
+.screen h2{margin:0;font-size:20px}
+.screen p{margin:0;font-size:14px;line-height:1.55;opacity:.95;max-width:340px}
+.screen .sub{font-size:12px;opacity:.8}
+.big{min-width:220px;min-height:50px;border:0;border-radius:14px;background:linear-gradient(#ffd34a,#f0a64a);color:#3a2410;font:900 18px "Pretendard","Noto Sans KR",system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 0 #b06a1e}
+.small{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;padding:8px 14px;font:700 13px "Pretendard","Noto Sans KR",system-ui,sans-serif;cursor:pointer}
+.small.on{border-color:#ffd34a;background:rgba(255,211,74,.2)}
+.rowbtn{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.chars{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.chars button{border:2px solid rgba(255,255,255,.2);border-radius:12px;background:rgba(255,255,255,.07);padding:6px 8px;color:#fff;font:700 12px "Pretendard","Noto Sans KR",system-ui,sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chars button img{width:48px;height:57px;image-rendering:pixelated}
+.chars button.on{border-color:#ffd34a;background:rgba(255,211,74,.18)}
+.stages{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;width:100%;max-width:320px}
+.stages button{height:40px;border:2px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.07);color:#fff;font:800 14px "Pretendard","Noto Sans KR",system-ui,sans-serif;cursor:pointer}
+.stages button.done{border-color:#7fe07a;background:rgba(127,224,122,.15)}
+.stages button.lock{opacity:.35}
+.stat{display:flex;gap:18px;justify-content:center;font-size:13px}
+.stat b{display:block;font-size:22px;color:#ffd34a}
+.pei{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border-radius:14px;padding:8px 12px;font-size:13px;max-width:340px;text-align:left}
+.pei img{width:32px;height:38px;image-rendering:pixelated}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>퓨어데이 벽돌깨기 · 빛의 방패</title>
+<meta name="description" content="『조아름의 퓨어데이』 벽돌깨기 — 빛의 방패로 구슬을 튕겨 어둠의 안개 블록과 군단을 걷어내요. 12단계, 마지막은 대왕용. 화면을 끌어 방패 조종">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="hud" id="hud" hidden>
+    <button id="btnMenu" aria-label="일시정지·메뉴">☰</button>
+    <span id="label"></span>
+    <span id="lives" aria-label="남은 하트"></span>
+    <button id="btnSound" aria-label="소리">🔊</button>
+  </div>
+  <div class="field" id="field"><canvas id="cv" width="360" height="640" aria-label="벽돌깨기 게임 화면"></canvas><div class="banner" id="banner" hidden></div></div>
+  <div class="pad" id="pad" hidden><div class="hint" id="hint">화면 아무 데나 누르고 좌우로 끌면 방패가 따라와요 · 누르면 구슬 출발<br><small>키보드 ←→ · Space 출발</small></div></div>
+  <div class="toast" id="toast" hidden></div>
+  <div class="screen" id="screen"></div>
+</div>
+<script type="module" src="main.js?v=1"></script>
+</body>
+</html>
