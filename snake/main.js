@@ -14,18 +14,35 @@ const CHARS = [
 ];
 const ORB_COLORS = ["#ffd34a", "#ff6b6b", "#5ec8ff", "#7fe07a", "#ff9ad5", "#b48cff", "#ffa347"];
 const ORB_KINDS = [                       // 구슬 크기: 작은 것부터 큰 것까지. wave 가 오를수록 큰 것이 많이 나온다
-  { r: 5, grow: 1, score: 1 }, { r: 8, grow: 2, score: 3 }, { r: 12, grow: 3, score: 10 }, { r: 16, grow: 5, score: 25 },
+  { r: 5, grow: 1, score: 1 }, { r: 8, grow: 2, score: 3 }, { r: 12, grow: 3, score: 10 }, { r: 16, grow: 4, score: 25 },
 ];
-const LV_SEG = [0, 12, 24, 40, 60, 85, 115, 150, 190, 240, 300, 370, 450, 550, 700];   // LV n 이 되는 행렬 길이(LV1 = 0). 2026-10-22 시험 뒤 두 번 늦춤(자동 조종 40초 LV9 → LV7쯤)
-const TIERS = [                           // 어둠의 군단. pow = 이기려면 필요한 내 LV, from = 등장 wave(25초 단위)
-  { name: "졸개", pow: 1, r: 11, spd: 58, color: "#8a5ac0", score: 10, drops: 1, from: 0 },
-  { name: "병사", pow: 2, r: 13, spd: 66, color: "#6a44a8", score: 25, drops: 3, from: 1 },
-  { name: "기사", pow: 4, r: 15, spd: 74, color: "#4c3390", score: 60, drops: 4, from: 3 },
-  { name: "대장", pow: 6, r: 18, spd: 80, color: "#34236e", score: 120, drops: 6, from: 5 },
-  { name: "장군", pow: 8, r: 22, spd: 86, color: "#1e1650", score: 300, drops: 9, from: 7 },
-  { name: "대왕용", pow: 12, r: 32, spd: 72, color: "#4a1020", score: 1200, drops: 18, from: 10 },
+const LV_SEG = [0, 12, 24, 40, 60, 85, 115, 150, 200, 260, 340, 440, 560, 700, 870, 1070, 1300, 1570, 1880, 2250];   // LV n 이 되는 행렬 길이(LV1 = 0). v3: LV20 까지, LV8 뒤는 더 가파르게
+const TIERS = [                           // 어둠의 군단. pow = 이기려면 필요한 내 LV(진군 강화 buff 가 더해짐), from = 등장 wave(20초 단위). v3(2026-10-23) 전부 앞당기고 빨라짐, 떨어뜨리는 구슬은 줄임
+  { name: "졸개", pow: 1, r: 11, spd: 70, color: "#8a5ac0", score: 10, drops: 1, from: 0 },
+  { name: "병사", pow: 2, r: 13, spd: 80, color: "#6a44a8", score: 25, drops: 2, from: 0 },
+  { name: "기사", pow: 4, r: 15, spd: 92, color: "#4c3390", score: 60, drops: 3, from: 1 },
+  { name: "대장", pow: 6, r: 18, spd: 100, color: "#34236e", score: 120, drops: 4, from: 2 },
+  { name: "장군", pow: 8, r: 22, spd: 108, color: "#1e1650", score: 300, drops: 5, from: 3 },
+  { name: "대왕용", pow: 12, r: 32, spd: 95, color: "#4a1020", score: 1200, drops: 10, from: 5 },
 ];
-const WAVE_SEC = 25;
+const WAVE_SEC = 20;
+const DRAGON_EVERY = 5;                   // 대왕용은 5번째 진군(100초)마다 — 10·15… 진군에 다시
+// 진군 강화: 4번째 진군(60초)부터 두 진군마다 군단 힘 +1 (최대 +6). 그 뒤 나온 군단은 힘 표시도 올라간다 → 계속 자라야 한다
+const waveBuff = (wave) => Math.min(6, Math.floor(Math.max(0, wave - 3) / 2));
+const powOf = (e) => TIERS[e.tier].pow + (e.buff || 0);
+// LV 강화: 내 LV 이 오르면 새로 오는 군단도 따라 세진다 — 졸개 LV-6 · 병사 LV-5 · 기사 LV-3 · 대장 LV-1 · 장군 LV+1 · 대왕용 LV+2 (기본 힘보다 낮아지지는 않음). 실제 강화 = 진군 강화와 LV 강화 중 큰 쪽
+const lvBuff = (lv, tier) => Math.max(0, lv - (tier === 5 ? 10 : 7));
+const buffFor = (tier) => Math.max(waveBuff(G.wave), lvBuff(G.lv, tier));
+// 진군마다 중간 보스: 1→기사, 2→대장, 3→장군, 4+→장군 + 대장 호위(진군이 오를수록 늘어남). 5의 배수 진군은 대왕용
+function midBossPlan(wave) {
+  if (wave <= 0) return [];
+  if (wave % DRAGON_EVERY === 0) return [5];
+  if (wave === 1) return [2];
+  if (wave === 2) return [3];
+  if (wave === 3) return [4];
+  const escorts = Math.min(3, Math.floor((wave - 2) / 2));
+  return [4, ...Array(escorts).fill(3)];
+}
 const CLEAR_LINES = ["감사해요, 함께해서 더 즐거웠어요!", "빛은 어둠을 두려워하지 않아요.", "구슬이 이렇게 길게 이어졌어요!", "한 알 한 알이 다 소중해요."];
 const PEI_HIT = ["🦜 페이: 아직 힘이 모자라요. 구슬을 더 모아요!", "🦜 페이: 끼룩! 괜찮아요, 빛은 다시 모여요.", "🦜 페이: 초록 테두리 적만 부딪혀요!"];
 const PEI_OVER = ["🦜 페이: 끼룩! 괜찮아요, 다시 한 번!", "🦜 페이: 구슬은 다시 반짝일 거예요.", "🦜 페이: 장군은 LV 8부터, 대왕용은 LV 12부터예요!"];
@@ -98,15 +115,37 @@ function spawnOrb(anywhere = false, at = null, kind = null) {
   const k = kind ?? orbKindFor();
   G.orbs.push({ x: p.x, y: p.y, k, c: pick(ORB_COLORS), ph: rnd(0, 6.28), vx: at ? rnd(-90, 90) : 0, vy: at ? rnd(-90, 90) : 0 });
 }
-function spawnEnemy(tier, anywhere = false, at = null) {
+function spawnEnemy(tier, anywhere = false, at = null, boss = false) {
   const p = at || ringPos(anywhere ? 420 : 380, anywhere ? 900 : 620); if (!p) return;
   const T = TIERS[tier];
-  G.enemies.push({ x: p.x, y: p.y, tier, ang: rnd(0, 6.28), turn: 0, stun: 0, bite: 0, ph: rnd(0, 6.28), hp: tier === 5 ? 3 : 1 });
-  if (!G.seen.has(tier)) { G.seen.add(tier); banner(`어둠의 ${T.name} 등장!`, `힘 ${T.pow} — LV ${T.pow} 이상이면 부딪혀 물리쳐요`, true); tone([200, 150], 0.15, 0.06, "sawtooth"); }
+  // 중간 보스(boss): 여러 번 부딪혀야 하고(기사·대장 2번, 장군 3번), 멀리서도 쫓아오며, 점수·구슬이 두 배
+  const hp = tier === 5 ? 3 + Math.floor(G.wave / (DRAGON_EVERY * 2)) : boss ? (tier >= 4 ? 3 : 2) : 1;
+  const buff = buffFor(tier);
+  G.enemies.push({ x: p.x, y: p.y, tier, ang: rnd(0, 6.28), turn: 0, stun: 0, bite: 0, ph: rnd(0, 6.28), hp, boss: boss || tier === 5, buff });
+  if (!G.seen.has(tier)) { G.seen.add(tier); banner(`어둠의 ${T.name} 등장!`, `힘 ${T.pow + buff} — LV ${T.pow + buff} 이상이면 부딪혀 물리쳐요`, true); tone([200, 150], 0.15, 0.06, "sawtooth"); }
 }
-function pickTier() {   // 지금 wave 에 나올 수 있는 등급 중 하나 (낮은 등급이 더 자주)
-  const can = TIERS.map((T, i) => i).filter((i) => i < 5 && TIERS[i].from <= G.wave);
-  const w = can.map((i) => 1 / (1 + (can.length - 1 - (can.length - 1 - i)) * 0.6));   // 높은 등급일수록 가중치 작게
+function spawnMidBosses(wave) {   // 진군이 바뀔 때마다 중간 보스 행렬
+  const plan = midBossPlan(wave); if (!plan.length) return false;
+  if (plan[0] === 5) {
+    if (!G.enemies.some((e) => e.tier === 5)) { spawnEnemy(5, false, null, true); const d = G.enemies[G.enemies.length - 1]; banner("⚠ 대왕용이 나타났어요!", `LV ${powOf(d)} 이상이면 ${d.hp}번 부딪혀 물리쳐요`, true); }
+    return true;
+  }
+  // 아직 못 물리친 중간 보스가 3을 넘으면 가장 오래된 것부터 물러난다(약한 플레이어에게 끝없이 쌓이지 않게)
+  const act = G.enemies.filter((e) => e.boss && e.tier < 5);
+  for (let k = 0; act.length - k + plan.length > 3 && k < act.length; k++) { const j = G.enemies.indexOf(act[k]); if (j >= 0) { G.enemies.splice(j, 1); toast(`${TIERS[act[k].tier].name}이(가) 어둠 속으로 물러났어요`); } }
+  const base = ringPos(420, 600) || { x: G.x + 450, y: G.y };
+  plan.forEach((tier, k) => { const a = k * 1.1, d = k ? 70 : 0; spawnEnemy(tier, false, { x: clamp(base.x + Math.cos(a) * d, 30, WORLD - 30), y: clamp(base.y + Math.sin(a) * d, 30, WORLD - 30) }, true); });
+  const T = TIERS[plan[0]], esc = plan.length - 1;
+  banner(`⚔ 중간 보스 — 어둠의 ${T.name}!`, `힘 ${T.pow + buffFor(plan[0])} · ${plan[0] >= 4 ? 3 : 2}번 부딪혀야 해요${esc ? ` · 대장 호위 ${esc}` : ""}`, true);
+  tone([160, 120, 160, 100], 0.12, 0.07, "sawtooth");
+  return true;
+}
+function pickTier() {   // 지금 나올 수 있는 등급 중 하나. 진군 시간으로 열리거나, 내 LV 으로 이길 수 있으면 열린다. 높은 등급일수록 더 자주, 나보다 센 등급·너무 약한 등급은 덜
+  const g = G; let can = TIERS.map((T, i) => i).filter((i) => i < 5 && (TIERS[i].from <= g.wave || g.lv >= TIERS[i].pow + buffFor(i)));
+  // 나보다 센 일반 군단은 들판에 4까지만 — 그 이상이면 이길 수 있는 등급만 나온다(행렬을 끝없이 물리지 않게)
+  const strong = g.enemies.filter((e) => !e.boss && powOf(e) > g.lv).length;
+  if (strong >= 4) { const weak = can.filter((i) => TIERS[i].pow + buffFor(i) <= g.lv); if (weak.length) can = weak; }
+  const w = can.map((i) => { const T = TIERS[i], pw = T.pow + buffFor(i); let v = 1 + i * 0.4; if (pw > g.lv + 2) v *= 0.2; else if (pw > g.lv) v *= 0.45; else if (pw <= g.lv - 3) v *= 0.6; return v; });
   let s = w.reduce((a, b) => a + b, 0), r = Math.random() * s;
   for (let k = 0; k < can.length; k++) { r -= w[k]; if (r <= 0) return can[k]; }
   return can[0];
@@ -116,7 +155,11 @@ function pickTier() {   // 지금 wave 에 나올 수 있는 등급 중 하나 (
 function update(dt) {
   const g = G; g.t += dt;
   const wave = Math.floor(g.t / WAVE_SEC);
-  if (wave !== g.wave) { g.wave = wave; if (!TIERS.some((T) => T.from === wave)) banner(`제 ${wave + 1} 진군`, "구슬이 더 커지고 군단이 늘어요"); }
+  if (wave !== g.wave) {
+    const up = waveBuff(wave) > waveBuff(g.wave); g.wave = wave;
+    if (!spawnMidBosses(wave)) banner(`제 ${wave + 1} 진군`, up ? `⚠ 진군 강화 — 새로 오는 군단의 힘 +${waveBuff(wave)}` : "구슬이 더 커지고 군단이 늘어요");
+    else if (up) toast(`⚠ 진군 강화 — 새로 오는 군단의 힘 +${waveBuff(wave)}`, 3000);
+  }
   // 입력 → 가고 싶은 각도
   if (AUTO) g.want = autoAngle();
   else if (g.keys.size) { let dx = 0, dy = 0; if (g.keys.has("left")) dx--; if (g.keys.has("right")) dx++; if (g.keys.has("up")) dy--; if (g.keys.has("down")) dy++; if (dx || dy) { g.want = Math.atan2(dy, dx); g.started = true; } }
@@ -152,36 +195,41 @@ function update(dt) {
     } else if (dd > 1500) g.orbs.splice(i, 1);     // 너무 먼 구슬은 치우고 근처에 다시
   }
   g.spawnAcc += dt;
-  if (g.spawnAcc > 0.25) { g.spawnAcc = 0; const near = g.orbs.filter((o) => dist(o.x, o.y, g.x, g.y) < 1000).length; if (near < 42) spawnOrb(); }
-  // 군단: 숫자 유지 + 등장 + 대왕용
-  const want = 8 + Math.min(10, g.wave);
-  if (g.enemies.length < want && Math.random() < dt * 1.5) spawnEnemy(pickTier());
-  if (g.wave >= TIERS[5].from) { g.bossTimer += dt; if (g.bossTimer > 75 && !g.enemies.some((e) => e.tier === 5)) { g.bossTimer = 0; spawnEnemy(5); banner("⚠ 대왕용이 나타났어요!", "LV 12 이상이면 세 번 부딪혀 물리쳐요", true); } }
-  else if (g.wave === TIERS[5].from - 1) g.bossTimer = 60;
+  if (g.spawnAcc > 0.25) { g.spawnAcc = 0; const near = g.orbs.filter((o) => dist(o.x, o.y, g.x, g.y) < 1000).length; if (near < 30) spawnOrb(); }
+  // 군단: 숫자 유지 + 등장 (중간 보스·대왕용은 진군이 바뀔 때 spawnMidBosses)
+  const want = 10 + Math.min(14, g.wave * 2);
+  if (g.enemies.length < want && Math.random() < dt * 2.5) spawnEnemy(pickTier());
   for (let i = g.enemies.length - 1; i >= 0; i--) {
     const e = g.enemies[i], T = TIERS[e.tier];
     e.stun = Math.max(0, e.stun - dt); e.bite = Math.max(0, e.bite - dt);
     const dd = dist(e.x, e.y, g.x, g.y);
     if (e.stun <= 0) {
       let target = e.ang;
-      if (dd < 420 + e.tier * 40 && g.started) target = Math.atan2(g.y - e.y, g.x - e.x);   // 군단은 늘 달려든다(약한 녀석은 부딪혀 물리치면 됨)
+      const sense = e.boss ? 1400 : 460 + e.tier * 50;
+      if (dd < sense && g.started) target = Math.atan2(g.y - e.y, g.x - e.x);   // 군단은 늘 달려든다(약한 녀석은 부딪혀 물리치면 됨). 보스는 멀리서도 쫓아온다
       else { e.turn -= dt; if (e.turn <= 0) { e.turn = rnd(0.8, 2.5); e.ang += rnd(-1.4, 1.4); } }
-      let da = Math.atan2(Math.sin(target - e.ang), Math.cos(target - e.ang)); e.ang += clamp(da, -3 * dt, 3 * dt);
-      const sp = T.spd + g.wave * 2;
+      let da = Math.atan2(Math.sin(target - e.ang), Math.cos(target - e.ang)); e.ang += clamp(da, -3.2 * dt, 3.2 * dt);
+      const sp = T.spd + Math.min(40, g.wave * 3);
       e.x += Math.cos(e.ang) * sp * dt; e.y += Math.sin(e.ang) * sp * dt;
       if (!inWorld(e.x, e.y, 30)) { e.ang += Math.PI; e.x = clamp(e.x, 30, WORLD - 30); e.y = clamp(e.y, 30, WORLD - 30); }
     }
-    if (dd > 1100 && e.tier < 5) { g.enemies.splice(i, 1); continue; }   // 멀리 간 녀석은 치움(대왕용 빼고) → 근처에 새로 나온다
+    // 군단끼리 겹치지 않게 밀어내기(보스가 한 덩어리로 몰려오지 않도록)
+    for (let j = 0; j < i; j++) { const o = g.enemies[j], md = T.r + TIERS[o.tier].r + 6, d = dist(e.x, e.y, o.x, o.y); if (d < md && d > 0.1) { const push = (md - d) * 0.5, nx = (e.x - o.x) / d, ny = (e.y - o.y) / d; e.x += nx * push; e.y += ny * push; o.x -= nx * push; o.y -= ny * push; } }
+    if (dd > 1100 && !e.boss) { g.enemies.splice(i, 1); continue; }   // 멀리 간 녀석은 치움(보스 빼고) → 근처에 새로 나온다
     // 머리와 부딪힘
     if (dd < T.r + 14 && g.started) {
-      if (g.lv >= T.pow) { if (e.tier === 5 && e.stun > 0) continue; if (e.tier === 5) { e.hp--; e.stun = 1.2; e.x += Math.cos(e.ang + Math.PI) * 60; burst(e.x, e.y, "#ff8aa0", 10); tone([400, 300], 0.08, 0.05); if (e.hp > 0) { toast(`대왕용에게 한 방! 남은 ${e.hp}`); continue; } } defeat(i); continue; }
+      if (g.lv >= powOf(e)) {
+        if (e.boss && e.stun > 0) continue;
+        if (e.boss) { e.hp--; e.stun = e.tier === 5 ? 1.2 : 0.9; e.x += Math.cos(e.ang + Math.PI) * 60; e.y += Math.sin(e.ang + Math.PI) * 60; burst(e.x, e.y, "#ff8aa0", 10); tone([400, 300], 0.08, 0.05); if (e.hp > 0) { toast(`${e.tier === 5 ? "대왕용" : "중간 보스 " + T.name}에게 한 방! 남은 ${e.hp}`); continue; } }
+        defeat(i); continue;
+      }
       if (g.inv <= 0) { hit(e); continue; }
     }
-    // 행렬(몸)과 닿음: 약한 녀석은 빛에 닿아 물러나고, 강한 녀석은 꼬리를 문다
+    // 행렬(몸)과 닿음: 약한 녀석은 빛에 닿아 물러나고, 강한 녀석은 꼬리를 문다(보스는 더 크게)
     if (e.bite <= 0 && g.started) {
       for (let s = 2; s < segs.length; s += 2) {
         if (dist(e.x, e.y, segs[s].x, segs[s].y) < T.r + 8) {
-          if (g.lv >= T.pow && e.tier < 5) { defeat(i); } else { e.bite = 1.4; if (g.seg > 5) { g.seg = Math.max(5, g.seg - 2); g.cols.length = g.seg; tone([180], 0.08, 0.04, "sawtooth"); burst(segs[s].x, segs[s].y, "#ffffff", 5); } }
+          if (g.lv >= powOf(e) && !e.boss) { defeat(i); } else if (g.lv >= powOf(e)) { e.bite = 0.6; } else { e.bite = 1.2; const n = e.boss ? 4 : 2; if (g.seg > 5) { g.seg = Math.max(5, g.seg - n); g.cols.length = g.seg; tone([180], 0.08, 0.04, "sawtooth"); burst(segs[s].x, segs[s].y, "#ffffff", 5); } }
           break;
         }
       }
@@ -191,7 +239,7 @@ function update(dt) {
   for (let i = g.parts.length - 1; i >= 0; i--) { const p = g.parts[i]; p.t -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96; if (p.t <= 0) g.parts.splice(i, 1); }
   // LV
   const lv = lvOf(g.seg);
-  if (lv !== g.lv) { if (lv > g.lv) { banner(`LV ${lv}!`, lv >= 12 ? "대왕용과 맞설 수 있어요" : lv >= 8 ? "장군과 맞설 수 있어요" : lv >= 6 ? "대장과 맞설 수 있어요" : lv >= 4 ? "기사와 맞설 수 있어요" : "빛이 강해졌어요"); tone([523, 659, 784, 1046], 0.08, 0.05, "triangle"); } g.lv = lv; g.maxLv = Math.max(g.maxLv, lv); }
+  if (lv !== g.lv) { if (lv > g.lv) { banner(`LV ${lv}!`, lv >= 7 ? "지금 들판의 군단보다 세졌어요 — 새로 오는 군단은 더 강해요" : lv >= 6 ? "대장과 맞설 수 있어요" : lv >= 4 ? "기사와 맞설 수 있어요" : "빛이 강해졌어요"); tone([523, 659, 784, 1046], 0.08, 0.05, "triangle"); } g.lv = lv; g.maxLv = Math.max(g.maxLv, lv); }
   // 화면 따라가기
   const k = Math.min(1, dt * 4);
   g.camX = lerp(g.camX, g.x + Math.cos(g.ang) * 40, k); g.camY = lerp(g.camY, g.y + Math.sin(g.ang) * 40, k);
@@ -204,12 +252,14 @@ function eat(c, grow, score) {
 }
 function defeat(i) {
   const g = G, e = g.enemies[i], T = TIERS[e.tier];
-  g.enemies.splice(i, 1); g.kills++; g.killsBy[e.tier]++; g.score += T.score;
+  const mid = e.boss && e.tier < 5, score = mid ? T.score * 2 : T.score, drops = mid ? Math.round(T.drops * 1.5) : T.drops;
+  g.enemies.splice(i, 1); g.kills++; g.killsBy[e.tier]++; g.score += score; if (e.boss) g.bosses = (g.bosses || 0) + 1;
   burst(e.x, e.y, T.color, 14 + e.tier * 4); burst(e.x, e.y, "#ffd34a", 8);
-  for (let k = 0; k < T.drops; k++) spawnOrb(false, { x: e.x, y: e.y }, Math.min(3, Math.floor(k / 3) + (e.tier >= 3 ? 1 : 0)));
-  tone(e.tier >= 4 ? [392, 523, 659, 784, 1046] : [660, 880], 0.07, 0.05, "triangle");
-  toast(e.tier >= 4 ? `✨ 어둠의 ${T.name}을 물리쳤어요! +${T.score}` : `${T.name} 물리침 +${T.score}`);
-  if (e.tier === 5) banner("🎉 대왕용을 물리쳤어요!", `+${T.score} — ${CHARS[P.char].name}: "${pick(CLEAR_LINES)}"`);
+  for (let k = 0; k < drops; k++) spawnOrb(false, { x: e.x, y: e.y }, Math.min(e.tier === 5 ? 3 : 2, Math.floor(k / 3) + (e.tier >= 3 ? 1 : 0)));   // 아주 큰 구슬은 대왕용만
+  tone(e.tier >= 4 || mid ? [392, 523, 659, 784, 1046] : [660, 880], 0.07, 0.05, "triangle");
+  toast(e.tier >= 4 ? `✨ 어둠의 ${T.name}을 물리쳤어요! +${score}` : `${T.name} 물리침 +${score}`);
+  if (e.tier === 5) banner("🎉 대왕용을 물리쳤어요!", `+${score} — ${CHARS[P.char].name}: "${pick(CLEAR_LINES)}"`);
+  else if (mid) banner(`🎉 중간 보스 ${T.name}을 물리쳤어요!`, `+${score} — ${CHARS[P.char].name}: "${pick(CLEAR_LINES)}"`);
 }
 function hit(e) {
   const g = G, T = TIERS[e.tier];
@@ -219,7 +269,7 @@ function hit(e) {
   e.stun = 1.5; burst(g.x, g.y, "#ffffff", 16);
   tone([300, 200, 120], 0.12, 0.07, "sawtooth");
   if (g.lives <= 0) { gameOver(); return; }
-  toast(`${T.name}(힘 ${T.pow})에게 부딪혔어요 — ${pick(PEI_HIT)}`, 2600);
+  toast(`${T.name}(힘 ${powOf(e)})에게 부딪혔어요 — ${pick(PEI_HIT)}`, 2600);
 }
 function burst(x, y, c, n) { for (let k = 0; k < n; k++) { const a = rnd(0, 6.28), s = rnd(40, 220); G.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: rnd(0.3, 0.8), c, r: rnd(2, 5) }); } }
 function spacing() { return 6 + Math.min(6, G.lv * 0.6); }
@@ -240,7 +290,7 @@ function gameOver() {
   const c = CHARS[P.char], mm = Math.floor(g.t / 60), ss = String(Math.floor(g.t % 60)).padStart(2, "0");
   showScreen(`<h2>진군 끝</h2><div class="scoreBig">${g.score}</div><p>최고 ${P.best}</p>
     <div class="stats"><span>최고 LV<b>${g.maxLv}</b></span><span>물리친 군단<b>${g.kills}</b></span><span>시간<b>${mm}:${ss}</b></span></div>
-    <div class="ranks">${TIERS.map((T, i) => g.killsBy[i] ? `<span>${T.name} ×${g.killsBy[i]}</span>` : "").join("")}</div>
+    <div class="ranks">${TIERS.map((T, i) => g.killsBy[i] ? `<span>${T.name} ×${g.killsBy[i]}</span>` : "").join("")}${g.bosses ? `<span>⚔ 보스 ×${g.bosses}</span>` : ""}</div>
     <div class="say"><img src="assets/${c.id}.png" alt=""><span>${pick(PEI_OVER)}</span></div>
     <button class="big" id="retry">다시 진군</button><button class="ghost" id="toTitle">처음으로</button>`);
   $("retry").onclick = () => { newGame(); play(); }; $("toTitle").onclick = title;
@@ -286,8 +336,8 @@ function hud() {
   $("lives").textContent = "♥".repeat(g.lives) + "♡".repeat(Math.max(0, 3 - g.lives));
   const a = LV_SEG[g.lv - 1], b = LV_SEG[g.lv] ?? (a + 60);
   $("bar").style.width = `${clamp(((g.seg - a) / (b - a)) * 100, 0, 100)}%`;
-  const next = TIERS.find((T) => T.pow > g.lv);
-  $("info").textContent = `행렬 ${g.seg} · ⚔ ${g.kills}` + (next ? ` · ${next.name}은 LV ${next.pow}` : " · 모두 이길 수 있어요");
+  const next = TIERS.find((T, i) => T.pow + buffFor(i) > g.lv), nb = next ? buffFor(TIERS.indexOf(next)) : 0;
+  $("info").textContent = `행렬 ${g.seg} · ⚔ ${g.kills}` + (next ? ` · ${next.name}은 LV ${next.pow + nb}` : " · 모두 이길 수 있어요");
   const mm = Math.floor(g.t / 60), ss = String(Math.floor(g.t % 60)).padStart(2, "0");
   $("wave").textContent = `제 ${g.wave + 1} 진군 · ${mm}:${ss}`;
   $("btnSound").textContent = P.sound ? "🔊" : "🔇";
@@ -374,11 +424,13 @@ function draw() {
 }
 function drawEnemy(e, ox, oy) {
   const g = G, T = TIERS[e.tier], x = e.x + ox, y = e.y + oy, r = T.r; if (x < -60 || y < -60 || x > VW + 60 || y > VH + 60) return;
-  const can = g.lv >= T.pow, bob = Math.sin(g.t * 6 + e.ph) * 1.5;
+  const can = g.lv >= powOf(e), bob = Math.sin(g.t * 6 + e.ph) * 1.5;
   ctx.save(); ctx.translate(x, y + bob);
   // 이길 수 있으면 초록, 아니면 빨간 테두리
   ctx.strokeStyle = can ? "#7fe07a" : "#ff5a6e"; ctx.lineWidth = 2.5; ctx.globalAlpha = .9; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
   if (e.tier >= 4) { ctx.strokeStyle = e.tier === 5 ? "rgba(255,120,140,.5)" : "rgba(200,170,255,.5)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 11 + Math.sin(g.t * 4) * 3, 0, 7); ctx.stroke(); }
+  // 중간 보스: 금빛 고리
+  if (e.boss && e.tier < 5) { ctx.strokeStyle = "rgba(255,211,74,.75)"; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -g.t * 30; ctx.beginPath(); ctx.arc(0, 0, r + 16 + Math.sin(g.t * 5) * 2, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
   // 망토(대장 이상)
   if (e.tier >= 3) { ctx.fillStyle = e.tier === 5 ? "#6a1030" : "#241a4a"; ctx.beginPath(); ctx.moveTo(-r * .9, -r * .2); ctx.lineTo(-r * 1.4, r * 1.1); ctx.lineTo(r * 1.4, r * 1.1); ctx.lineTo(r * .9, -r * .2); ctx.fill(); }
   // 날개(대왕용)
@@ -397,7 +449,7 @@ function drawEnemy(e, ox, oy) {
   if (e.tier >= 4) { ctx.fillStyle = "#ffd34a"; ctx.beginPath(); ctx.moveTo(-r * .5, -r * 1.05); ctx.lineTo(-r * .4, -r * 1.5); ctx.lineTo(-r * .15, -r * 1.15); ctx.lineTo(0, -r * 1.6); ctx.lineTo(r * .15, -r * 1.15); ctx.lineTo(r * .4, -r * 1.5); ctx.lineTo(r * .5, -r * 1.05); ctx.fill(); }
   // 이름·힘
   ctx.font = `800 ${e.tier >= 4 ? 12 : 11}px Pretendard, "Noto Sans KR", sans-serif`; ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 3;
-  const label = `${T.name} 힘${T.pow}${e.tier === 5 ? ` ♥${e.hp}` : ""}`; ctx.strokeText(label, 0, r + 18); ctx.fillText(label, 0, r + 18);
+  const label = `${e.boss && e.tier < 5 ? "중간 보스 " : ""}${T.name} 힘${powOf(e)}${e.boss ? ` ♥${e.hp}` : ""}`; ctx.strokeText(label, 0, r + 18); ctx.fillText(label, 0, r + 18);
   ctx.restore();
 }
 function lighten(hex) { const p = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); return `rgb(${p.map((v) => Math.min(255, v + 70)).join(",")})`; }
@@ -406,11 +458,11 @@ function lighten(hex) { const p = [1, 3, 5].map((i) => parseInt(hex.slice(i, i +
 function autoAngle() {
   const g = G; g.started = true;
   let tx = null, ty = null, best = 1e9;
-  for (const e of g.enemies) { const T = TIERS[e.tier]; const d = dist(e.x, e.y, g.x, g.y); if (g.lv >= T.pow && (e.tier < 5 ? d < 300 : e.stun <= 0) && d < best) { best = d * 0.6; tx = e.x; ty = e.y; } }
+  for (const e of g.enemies) { const T = TIERS[e.tier]; const d = dist(e.x, e.y, g.x, g.y); if (g.lv >= powOf(e) && (e.tier < 5 ? d < 300 : e.stun <= 0) && d < best) { best = d * 0.6; tx = e.x; ty = e.y; } }
   for (const o of g.orbs) { const d = dist(o.x, o.y, g.x, g.y) / (1 + o.k * 0.6); if (d < best) { best = d; tx = o.x; ty = o.y; } }
   let ax = tx === null ? Math.cos(g.ang) : (tx - g.x), ay = ty === null ? Math.sin(g.ang) : (ty - g.y);
   const L = Math.hypot(ax, ay) || 1; ax /= L; ay /= L;
-  for (const e of g.enemies) { const T = TIERS[e.tier]; if (g.lv >= T.pow) continue; const d = dist(e.x, e.y, g.x, g.y); if (d < 220) { const w = (220 - d) / 220 * 2.5; ax += (g.x - e.x) / d * w; ay += (g.y - e.y) / d * w; } }
+  for (const e of g.enemies) { const T = TIERS[e.tier]; if (g.lv >= powOf(e)) continue; const d = dist(e.x, e.y, g.x, g.y); if (d < 220) { const w = (220 - d) / 220 * 2.5; ax += (g.x - e.x) / d * w; ay += (g.y - e.y) / d * w; } }
   if (g.x < 150) ax += 1; if (g.x > WORLD - 150) ax -= 1; if (g.y < 150) ay += 1; if (g.y > WORLD - 150) ay -= 1;
   return Math.atan2(ay, ax);
 }
@@ -463,6 +515,8 @@ Promise.all(CHARS.map((c) => new Promise((res) => { const im = new Image(); im.o
     if (hp.has("t")) G.t = Number(hp.get("t")) || 0;
     if (hp.has("seg")) { G.seg = Number(hp.get("seg")) || 5; while (G.cols.length < G.seg) G.cols.push(pick(ORB_COLORS)); G.lv = lvOf(G.seg); }
     if (hp.has("boss")) spawnEnemy(5);   // &boss 대왕용 바로 등장
+    if (hp.has("mid")) spawnMidBosses(Number(hp.get("mid")) || 1);   // &mid=진군번호 그 진군의 중간 보스 바로 등장
+    if (hp.has("t")) G.wave = Math.floor(G.t / WAVE_SEC);   // 앞당긴 시간의 진군은 이미 지난 것으로(첫 프레임에 중간 보스가 몰리지 않게)
     play();
   }
   requestAnimationFrame(frame);
