@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>퓨어데이 페널티킥 대결</title>
+<meta name="description" content="『조아름의 퓨어데이』 페널티킥 대결 — 6명의 선수 중 골라 슛과 막기를 번갈아 해요. 컴퓨터와 대결하거나 한 기기로 둘이서. 공을 튕기듯 끌어 슛, 골문을 눌러 막기">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="hud" id="hud" hidden>
+    <div class="side" id="sideA"><img id="faceA" alt=""><div><b id="nameA"></b><span class="slots" id="slotsA"></span></div></div>
+    <div class="mid"><button id="btnMenu" aria-label="메뉴">☰</button><div class="score"><span id="scoreA">0</span>:<span id="scoreB">0</span></div><div class="round" id="round"></div></div>
+    <div class="side r" id="sideB"><div><b id="nameB"></b><span class="slots" id="slotsB"></span></div><img id="faceB" alt=""></div>
+  </div>
+  <div class="field" id="field"><canvas id="cv" width="360" height="640" aria-label="페널티킥 게임 화면"></canvas><div class="banner" id="banner" hidden></div></div>
+  <div class="pad" id="pad" hidden><div class="hint" id="hint"></div></div>
+  <div class="toast" id="toast" hidden></div>
+  <div class="screen" id="screen"></div>
+</div>
+<script type="module" src="main.js?v=1"></script>
+</body>
+</html>
