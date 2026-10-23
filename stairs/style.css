@@ -1,0 +1,12 @@
+/* 퓨어데이 무한의 계단 — 화면은 9:16 캔버스(픽셀 그대로 키움) + 아래 큰 버튼 두 개 */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #14121c; overflow: hidden; touch-action: manipulation; }
+body { display: grid; place-items: center; font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif; color: #fff; user-select: none; -webkit-user-select: none; }
+.wrap { position: relative; height: min(100dvh, calc(100vw * 16 / 9)); aspect-ratio: 9 / 16; max-width: 100vw; display: flex; flex-direction: column; }
+canvas { flex: 1; width: 100%; min-height: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 10px 10px 0 0; }
+.pad { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; background: #241f33; border-radius: 0 0 10px 10px; }
+.pad button { min-height: 76px; border: 0; border-radius: 14px; font: 900 30px/1 "Pretendard","Noto Sans KR",system-ui,sans-serif; color: #fff; cursor: pointer; box-shadow: 0 5px 0 rgba(0, 0, 0, .35); }
+.pad button small { display: block; font-size: 14px; font-weight: 800; margin-top: 4px; }
+.pad button:active, .pad button.hit { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, .35); }
+.turn { background: linear-gradient(#6a8fd8, #3d5fa8); }
+.climb { background: linear-gradient(#f0a64a, #d06a1e); }
