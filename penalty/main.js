@@ -3,14 +3,33 @@
 const W = 360, H = 640;
 const GOAL = { cx: 180, y: 262, hw: 134, h: 98 };
 const BALL0 = { x: 180, y: 556 };
+// 특기 필드: steady 흔들림 배수 · fast 비행 시간 배수 · curve 휘는 정도 · honest 컴퓨터 키커 눈치 화살표 정직도 · eye 사람 키퍼일 때 화살표 정직도 보너스
+//            reach 키퍼 가로 손길이 보너스 · read 컴퓨터 키퍼 읽기 보너스 · minPow 컴퓨터 키커 최소 힘
 const PLAYERS = [
-  { id: "areum", name: "조아름", acc: 5, pow: 3, def: 4, skill: "빛의 화살", desc: "구석을 정확하게 노려요" },
-  { id: "heim", name: "조하임", acc: 3, pow: 4, def: 3, skill: "AI 분석", desc: "막을 때 키커의 눈치를 더 잘 읽어요" },
-  { id: "mia", name: "김미아", acc: 4, pow: 4, def: 5, skill: "점프 세이브", desc: "운동선수 출신, 손이 길어요" },
-  { id: "michael", name: "마이클 하트", acc: 3, pow: 5, def: 4, skill: "봅슬레이 파워", desc: "공이 가장 빨라요" },
-  { id: "diego", name: "디에고", acc: 4, pow: 4, def: 3, skill: "바나나킥", desc: "공이 휘어서 골키퍼가 헷갈려요" },
-  { id: "kwame", name: "콰메", acc: 3, pow: 5, def: 4, skill: "강슛", desc: "언제나 온 힘을 실어 차요" },
-];
+  { id: "areum", name: "조아름", acc: 5, pow: 3, def: 4, skill: "빛의 화살", desc: "구석을 정확하게 노려요", steady: 0.6 },
+  { id: "heim", name: "조하임", acc: 3, pow: 4, def: 3, skill: "AI 분석", desc: "막을 때 키커의 눈치를 더 잘 읽어요", read: 0.1, eye: 0.2 },
+  { id: "mia", name: "김미아", acc: 4, pow: 4, def: 5, skill: "점프 세이브", desc: "운동선수 출신, 손이 길어요", reach: 0.08 },
+  { id: "michael", name: "마이클 하트", acc: 3, pow: 5, def: 4, skill: "봅슬레이 파워", desc: "공이 가장 빨라요", fast: 0.8 },
+  { id: "diego", name: "디에고", acc: 4, pow: 4, def: 3, skill: "바나나킥", desc: "공이 휘어서 골키퍼가 헷갈려요", curve: 0.28, honest: 0.5 },
+  { id: "kwame", name: "콰메", acc: 3, pow: 5, def: 4, skill: "강슛", desc: "언제나 온 힘을 실어 차요", fast: 0.88, steady: 1.15, minPow: 0.75 },
+].map((p) => ({ ...p, team: "light", key: p.id }));
+// 드래곤 군단 6 — 그림은 슈팅 폴더 유니폼 32장(tools/prep_players.py → d_<id>*.png). 적은 대사 없음(퓨어데이 규칙)
+const DRAGONS = [
+  { id: "dragon", name: "대왕용", acc: 3, pow: 5, def: 5, skill: "큰 날개", desc: "날개가 넓어 골문이 좁아 보여요", reach: 0.1 },
+  { id: "rahab", name: "라합", acc: 4, pow: 4, def: 4, skill: "속임수", desc: "눈치 화살표가 자주 거짓말해요", honest: 0.35 },
+  { id: "apophis", name: "아포피스", acc: 4, pow: 3, def: 4, skill: "세 머리", desc: "세 머리로 슛 방향을 잘 읽어요", read: 0.1 },
+  { id: "wolf", name: "늑대개 우두머리", acc: 3, pow: 4, def: 3, skill: "질주", desc: "공이 아주 빨라요", fast: 0.85 },
+  { id: "lava", name: "용암 짐승", acc: 2, pow: 5, def: 4, skill: "용암 강슛", desc: "온 힘을 실어 차요", fast: 0.88, steady: 1.2, minPow: 0.75 },
+  { id: "wyvern", name: "비룡대 대장", acc: 4, pow: 4, def: 3, skill: "급강하", desc: "공이 휘어 들어와요", curve: 0.2 },
+].map((p) => ({ ...p, team: "dragon", key: "d_" + p.id }));
+const ROSTER = PLAYERS.concat(DRAGONS);
+// 키커 그림 속 축구공 자리 [가로 비율, 세로 비율, 반지름/그림 높이] — tools/_ballzoom.png 로 눈으로 잼(2026-10-25).
+// 그림의 공을 게임 공 자리(BALL0)에 맞춰 세우고, 서 있을 땐 그림 속 공이 곧 게임 공이 된다
+const BALLPOS = {
+  areum: [0.2, 0.905, 0.095], heim: [0.82, 0.917, 0.093], mia: [0.25, 0.915, 0.092], michael: [0.205, 0.913, 0.096], diego: [0.2, 0.912, 0.094], kwame: [0.83, 0.916, 0.087],
+  d_dragon: [0.245, 0.88, 0.118], d_rahab: [0.86, 0.918, 0.094], d_apophis: [0.575, 0.905, 0.095], d_wolf: [0.865, 0.89, 0.117], d_lava: [0.868, 0.885, 0.118], d_wyvern: [0.855, 0.883, 0.116],
+};
+const KICK_H = 168;
 const DIFF = [{ id: 0, name: "쉬움", read: 0.42 }, { id: 1, name: "보통", read: 0.58 }, { id: 2, name: "어려움", read: 0.72 }];
 const KICKS = 5;
 const LINES = {
@@ -54,16 +73,23 @@ const sfx = {
 // ---------------------------------------------------------------- 경기 상태
 let mode = "title";       // title | select | play
 let M = null;             // 경기
-function newMatch(a, b, vs) {
+function newMatch(a, b, vs, teams = null) {
   M = {
     vs,                                   // "cpu" | "2p"
-    side: [{ p: a, goals: 0, rec: [] }, { p: b, goals: 0, rec: [] }],
+    // 팀 대결이면 side.team = 차는 순서(골키퍼 빼고 5명), side.keeper = 골키퍼. 개인 대결이면 p 한 명이 차고 막는다
+    side: [{ p: a, goals: 0, rec: [], team: teams ? teams[0].kick : null, keeper: teams ? teams[0].keep : null },
+           { p: b, goals: 0, rec: [], team: teams ? teams[1].kick : null, keeper: teams ? teams[1].keep : null }],
+    teamMode: !!teams,
     round: 1, shooter: 0, phase: "intro", t: 0, sudden: false,
     aim: null, drag: null, power: 0.6, charge: null, keeper: null, ball: null, fx: [], netShake: 0, cue: null, lastResult: null,
     keeperLate: false, kickAt: 0, hotPick: null, log: [],
   };
 }
 const S = () => M.side[M.shooter], K = () => M.side[1 - M.shooter];
+const shooterOf = (side) => (side.team ? side.team[side.rec.length % side.team.length] : side.p);
+const keeperOf = (side) => side.keeper || side.p;
+const SP = () => shooterOf(S()), KP = () => keeperOf(K());
+const face = (p) => `assets/players/${p.key}_face.png`;
 const isHumanShooter = () => M.vs === "2p" || M.shooter === 0;
 const isHumanKeeper = () => M.vs === "2p" || M.shooter === 1;
 
@@ -74,14 +100,15 @@ function title() {
   mode = "title"; $("hud").hidden = true; $("pad").hidden = true;
   screen(`<small style="letter-spacing:6px;opacity:.8;font-weight:800">PUREDAY PENALTY</small>
     <h1><b>퓨어데이</b><br>페널티킥 대결</h1>
-    <p>6명의 선수 가운데 골라 슛과 막기를 번갈아 해요.<br>5번씩 차서 더 많이 넣는 쪽이 이겨요.</p>
+    <p>빛 진영 6명과 드래곤 군단 6명이 승부차기로 맞서요.<br>5번씩 차서 더 많이 넣는 쪽이 이겨요.</p>
     <div class="rowbtn" id="diffRow">${DIFF.map((d) => `<button class="small ${P.diff === d.id ? "on" : ""}" data-d="${d.id}">${d.name}</button>`).join("")}</div>
-    <button class="big" id="btnCpu">컴퓨터와 대결</button>
+    <button class="big" id="btnTeam">⚔ 빛 진영 vs 드래곤 군단</button>
+    <button class="big" id="btnCpu">컴퓨터와 1:1 대결</button>
     <button class="big alt" id="btnTwo">둘이서 (한 기기)</button>
     <button class="small" id="btnHow">하는 방법</button>
     <p class="sub">${P.played ? `${P.played}경기 · ${P.wins}승 · 최다 골 ${P.best}` : "첫 대결을 시작해요"} · <span id="snd">${P.sound ? "🔊 소리 켬" : "🔇 소리 끔"}</span></p>`);
   $("diffRow").querySelectorAll("button").forEach((b) => (b.onclick = () => { P.diff = Number(b.dataset.d); save(); title(); }));
-  $("btnCpu").onclick = () => select("cpu"); $("btnTwo").onclick = () => select("2p"); $("btnHow").onclick = how;
+  $("btnTeam").onclick = teamSelect; $("btnCpu").onclick = () => select("cpu"); $("btnTwo").onclick = () => select("2p"); $("btnHow").onclick = how;
   $("snd").onclick = () => { P.sound = !P.sound; save(); title(); };
 }
 function how() {
@@ -89,26 +116,49 @@ function how() {
     <p><b>슛:</b> 공을 누른 채 골문 쪽으로 끌면 과녁이 보여요. <b>튕기듯 빠르게 놓으면 강슛</b>(골키퍼가 반응할 시간이 줄지만 조금 흔들려요), 천천히 놓으면 정확한 슛. 키보드는 ←↑→↓ 로 과녁, Space 를 누르고 있다가 놓으면 힘.</p>
     <p><b>막기:</b> 상대가 준비하는 동안 골문 안 막을 곳을 눌러요. 키커의 머리 위 눈치 화살표가 힌트인데, 가끔 속임수예요! 공이 떠난 직후에도 늦게 몸을 날릴 수 있지만 손이 짧아져요. 키보드 Q W E(위) · A S D(아래).</p>
     <p><b>둘이서:</b> 막는 사람이 먼저 몰래 막을 곳을 고르고 기기를 넘기면, 차는 사람이 슛해요.</p>
-    <p><b>선수 특기:</b> 조아름 정확 · 조하임 눈치 읽기 · 김미아 긴 손 · 마이클 빠른 공 · 디에고 휘는 공 · 콰메 강슛</p>
+    <p><b>팀 대결:</b> 빛 진영 골키퍼를 한 명 고르면 나머지 5명이 차례로 차요. 드래곤 군단도 골키퍼 한 명과 키커 5명이에요.</p>
+    <p><b>빛 진영 특기:</b> 조아름 정확 · 조하임 눈치 읽기 · 김미아 긴 손 · 마이클 빠른 공 · 디에고 휘는 공 · 콰메 강슛</p>
+    <p><b>드래곤 군단 특기:</b> 대왕용 큰 날개 · 라합 속임수 · 아포피스 세 머리 · 늑대개 질주 · 용암 짐승 강슛 · 비룡대 대장 휘는 공</p>
     <button class="big" id="btnBack">돌아가기</button>`);
   $("btnBack").onclick = title;
 }
+const card = (p, i, dis) => `<button class="card ${dis ? "taken" : ""} ${p.team}" data-i="${i}" ${dis ? "disabled" : ""}><img src="${face(p)}" alt=""><b>${p.name}</b><small>${p.skill} · ${p.desc}</small><div class="st"><span>슛 ${p.acc}</span><span>힘 ${p.pow}</span><span>막기 ${p.def}</span></div></button>`;
 function select(vs) {
   mode = "select"; const chosen = [];
   const step = () => {
     const who = chosen.length === 0 ? (vs === "cpu" ? "내 선수" : "1번 선수(먼저 차요)") : (vs === "cpu" ? "상대 선수" : "2번 선수");
+    const showDragons = !(vs === "cpu" && chosen.length === 0);   // 내 선수는 빛 진영, 상대는 둘 다
     screen(`<h2>${who}를 고르세요</h2>
-      <div class="cards">${PLAYERS.map((p, i) => `<button class="card ${chosen[0] === i ? "taken" : ""}" data-i="${i}" ${chosen[0] === i ? "disabled" : ""}><img src="assets/players/${p.id}_face.png" alt=""><b>${p.name}</b><small>${p.skill} · ${p.desc}</small><div class="st"><span>슛 ${p.acc}</span><span>힘 ${p.pow}</span><span>막기 ${p.def}</span></div></button>`).join("")}</div>
+      <div class="grp">☀ 빛 진영</div><div class="cards">${PLAYERS.map((p) => card(p, ROSTER.indexOf(p), chosen[0] === ROSTER.indexOf(p))).join("")}</div>
+      ${showDragons ? `<div class="grp red">🐉 드래곤 군단</div><div class="cards">${DRAGONS.map((p) => card(p, ROSTER.indexOf(p), chosen[0] === ROSTER.indexOf(p))).join("")}</div>` : ""}
       <div class="rowbtn">${chosen.length === 1 && vs === "cpu" ? `<button class="small" id="btnRand">무작위 상대</button>` : ""}<button class="small" id="btnBack">${chosen.length ? "앞으로" : "처음으로"}</button></div>`);
     $("screen").querySelectorAll(".card").forEach((b) => (b.onclick = () => { sfx.tick(); chosen.push(Number(b.dataset.i)); chosen.length === 2 ? start(chosen[0], chosen[1], vs) : step(); }));
-    const r = $("btnRand"); if (r) r.onclick = () => { const rest = PLAYERS.map((_, i) => i).filter((i) => i !== chosen[0]); chosen.push(pick(rest)); start(chosen[0], chosen[1], vs); };
+    const r = $("btnRand"); if (r) r.onclick = () => { const rest = ROSTER.map((_, i) => i).filter((i) => i !== chosen[0]); chosen.push(pick(rest)); start(chosen[0], chosen[1], vs); };
     $("btnBack").onclick = () => { if (chosen.length) { chosen.pop(); step(); } else title(); };
+    $("screen").scrollTop = 0;
   };
   step();
 }
+// 팀 대결: 빛 진영 골키퍼를 고르면 나머지 5명이 차례로 찬다. 드래곤 군단 골키퍼는 무작위
+function teamSelect() {
+  mode = "select";
+  screen(`<h2>빛 진영 골키퍼를 고르세요</h2><p class="sub">나머지 5명이 이 순서대로 차요</p>
+    <div class="cards">${PLAYERS.map((p) => card(p, ROSTER.indexOf(p), false)).join("")}</div>
+    <div class="rowbtn"><button class="small" id="btnBack">처음으로</button></div>`);
+  $("screen").querySelectorAll(".card").forEach((b) => (b.onclick = () => { sfx.tick(); startTeam(ROSTER[Number(b.dataset.i)]); }));
+  $("btnBack").onclick = title;
+}
+function startTeam(lightKeeper, dragonKeeper = pick(DRAGONS)) {
+  const L = { keep: lightKeeper, kick: PLAYERS.filter((p) => p !== lightKeeper) };
+  const D = { keep: dragonKeeper, kick: DRAGONS.filter((p) => p !== dragonKeeper) };
+  newMatch(lightKeeper, dragonKeeper, "cpu", [L, D]); mode = "play"; hideScreen(); $("hud").hidden = false; $("pad").hidden = false;
+  $("nameA").textContent = "빛 진영"; $("nameB").textContent = "드래곤 군단";
+  const m = M; hud(); sfx.whistle();
+  banner("⚔ 빛 진영 vs 드래곤 군단", `골키퍼 ${lightKeeper.name} · 상대 골키퍼 ${dragonKeeper.name}`);
+  setTimeout(() => { if (M === m && mode === "play") beginKick(); }, FAST ? 200 : 1800);
+}
 function start(a, b, vs) {
-  newMatch(PLAYERS[a], PLAYERS[b], vs); mode = "play"; hideScreen(); $("hud").hidden = false; $("pad").hidden = false;
-  $("faceA").src = `assets/players/${M.side[0].p.id}_face.png`; $("faceB").src = `assets/players/${M.side[1].p.id}_face.png`;
+  newMatch(ROSTER[a], ROSTER[b], vs); mode = "play"; hideScreen(); $("hud").hidden = false; $("pad").hidden = false;
   $("nameA").textContent = (vs === "2p" ? "1P " : "") + M.side[0].p.name; $("nameB").textContent = (vs === "2p" ? "2P " : "컴퓨터 ") + M.side[1].p.name;
   hud(); sfx.whistle(); beginKick();
 }
@@ -118,35 +168,33 @@ function beginKick() {
   const m = M; m.phase = "intro"; m.t = 0; m.aim = null; m.drag = null; m.keeper = null; m.ball = null; m.cue = null; m.keeperLate = false; m.hotPick = null; m.charge = null;
   m.shooterPos = 0; m.power = 0.6;
   hud();
-  const s = S(), k = K();
-  banner(`${m.sudden ? "서든데스 " : `${m.round}번째 킥 `}— ${s.p.name}`, `${k.p.name}이(가) 골문을 지켜요`);
+  banner(`${m.sudden ? "서든데스 " : `${m.round}번째 킥 `}— ${SP().name}`, `${KP().name}이(가) 골문을 지켜요`);
   setTimeout(() => { if (M !== m || mode !== "play") return; if (m.vs === "2p") hotKeeperPick(); else if (isHumanShooter()) phaseAim(); else phaseCpuAim(); }, FAST ? 200 : 1500);
 }
 function phaseAim() {
   const m = M; m.phase = "aim"; m.t = 0;
-  hint(`<b>${S().p.name}</b>의 슛 — 공을 누른 채 골문 쪽으로 끌어서 과녁을 맞추고, <b>튕기듯 놓으면 강슛</b>`);
+  hint(`<b>${SP().name}</b>의 슛 — 공을 누른 채 골문 쪽으로 끌어서 과녁을 맞추고, <b>튕기듯 놓으면 강슛</b>`);
   if (AUTO) setTimeout(() => { if (M === m && m.phase === "aim") shoot({ x: rnd(-1.1, 1.1), h: rnd(0, 1.1) }, rnd(0.3, 1)); }, FAST ? 150 : 900);
 }
 function hotKeeperPick() {   // 둘이서: 막는 사람이 몰래 고른다
   const m = M; m.phase = "hot";
-  const k = K();
-  screen(`<h2>${k.p.name}(${m.shooter === 0 ? "2P" : "1P"})이 막을 곳을 고르세요</h2><p class="sub">${S().p.name}은 잠깐 눈을 감아 주세요 🙈</p>
+  screen(`<h2>${KP().name}(${m.shooter === 0 ? "2P" : "1P"})이 막을 곳을 고르세요</h2><p class="sub">${SP().name}은 잠깐 눈을 감아 주세요 🙈</p>
     <div class="zones">${["↖ 위 왼쪽", "↑ 위 가운데", "↗ 위 오른쪽", "↙ 아래 왼쪽", "↓ 아래 가운데", "↘ 아래 오른쪽"].map((n, i) => `<button data-z="${i}">${n}</button>`).join("")}</div>`);
   $("screen").querySelectorAll(".zones button").forEach((b) => (b.onclick = () => { const z = Number(b.dataset.z); m.hotPick = { x: [-0.72, 0, 0.72][z % 3], h: z < 3 ? 0.75 : 0.2 }; sfx.tick();
-    screen(`<h2>골라졌어요!</h2><p>이제 기기를 <b>${S().p.name}</b>에게 넘겨 주세요.</p><button class="big" id="btnGo">슛 준비</button>`); $("btnGo").onclick = () => { hideScreen(); phaseAim(); }; }));
+    screen(`<h2>골라졌어요!</h2><p>이제 기기를 <b>${SP().name}</b>에게 넘겨 주세요.</p><button class="big" id="btnGo">슛 준비</button>`); $("btnGo").onclick = () => { hideScreen(); phaseAim(); }; }));
   if (AUTO) { m.hotPick = { x: pick([-0.72, 0, 0.72]), h: pick([0.75, 0.2]) }; hideScreen(); phaseAim(); }
 }
 function phaseCpuAim() {   // 컴퓨터가 찬다: 준비 동작 동안 사람이 막을 곳을 고른다
-  const m = M, s = S().p; m.phase = "cpuaim"; m.t = 0;
+  const m = M, s = SP(); m.phase = "cpuaim"; m.t = 0;
   const side = Math.random() < 0.65 ? (Math.random() < 0.5 ? -1 : 1) : 0;
   const x = side ? side * rnd(0.6, 0.97) : rnd(-0.3, 0.3), h = Math.random() < 0.5 ? rnd(0.05, 0.4) : rnd(0.5, 0.92);
-  const power = s.id === "kwame" ? rnd(0.75, 1) : rnd(0.45, 0.95);
+  const power = rnd(s.minPow || 0.45, s.minPow ? 1 : 0.95);
   m.plan = { aim: { x, h }, power };
-  const honest = Math.random() < (s.id === "diego" ? 0.5 : 0.65);
+  const honest = Math.random() < (s.honest ?? 0.65) + (KP().eye || 0);
   const shotPrev = resolveShot(s, m.plan.aim, power, true);   // 겉보기 방향(휘기 전)
   m.cue = honest ? col(shotPrev.apparent.x) : pick([-1, 0, 1].filter((c) => c !== col(shotPrev.apparent.x)));
   m.planned = shotPrev;
-  hint(`<b>${K().p.name}</b>의 막기 — 골문 안 막을 곳을 누르세요. 키커의 눈치 화살표는 힌트(가끔 속임수!)`);
+  hint(`<b>${KP().name}</b>의 막기 — 골문 안 막을 곳을 누르세요. 키커의 눈치 화살표는 힌트(가끔 속임수!)`);
   const wind = FAST ? 500 : 1700;
   setTimeout(() => { if (M === m && m.phase === "cpuaim") launch(shotPrev); }, wind);
   if (AUTO) setTimeout(() => { if (M === m && (m.phase === "cpuaim" || m.phase === "fly")) dive({ x: pick([-0.72, 0, 0.72]), h: pick([0.75, 0.2]) }); }, wind * rnd(0.3, 1.2));
@@ -154,22 +202,22 @@ function phaseCpuAim() {   // 컴퓨터가 찬다: 준비 동작 동안 사람�
 // 슛 계산: 선수 특기·힘에 따라 흔들림과 휘기를 더해 최종 도착점을 정한다
 function resolveShot(p, aim, power, keepRandom = false) {
   let sc = (0.2 - p.acc * 0.028) * (0.55 + power * 0.7);
-  if (p.id === "areum") sc *= 0.6; if (p.id === "kwame") sc *= 1.15;
+  sc *= p.steady || 1;
   const fx = aim.x + gauss() * sc, fh = Math.max(0, aim.h + gauss() * sc * 0.9);
-  const curve = p.id === "diego" ? (Math.random() < 0.5 ? -1 : 1) * rnd(0.22, 0.34) : 0;
-  let T = 0.98 - power * 0.38; if (p.id === "michael") T *= 0.8; if (p.id === "kwame") T *= 0.88; T = Math.max(0.42, T);
+  const curve = p.curve ? (Math.random() < 0.5 ? -1 : 1) * rnd(p.curve - 0.06, p.curve + 0.06) : 0;
+  let T = (0.98 - power * 0.38) * (p.fast || 1); T = Math.max(0.42, T);
   return { final: { x: fx, h: fh }, apparent: { x: fx - curve, h: fh }, curve, power, T };
 }
 function shoot(aim, power) {   // 사람이 찼다
   const m = M; if (m.phase !== "aim") return;
-  const shot = resolveShot(S().p, aim, power);
+  const shot = resolveShot(SP(), aim, power);
   if (m.vs === "2p") { m.keeper = { ...m.hotPick, late: false, t: 0 }; }
   else cpuKeeperDecide(shot);
   launch(shot);
 }
 function cpuKeeperDecide(shot) {
-  const m = M, k = K().p;
-  let p = DIFF[P.diff].read - shot.power * 0.12 + (k.id === "heim" ? 0.1 : 0);
+  const m = M, k = KP();
+  let p = DIFF[P.diff].read - shot.power * 0.12 + (k.read || 0);
   const ac = col(shot.apparent.x);
   const c = Math.random() < p ? ac : pick([-1, 0, 1].filter((v) => v !== ac));
   const hiOK = Math.random() < 0.55;
@@ -188,21 +236,21 @@ function dive(z) {   // 사람 골키퍼가 막을 곳을 정했다
   hint(m.keeper.late ? "늦게 몸을 날렸어요!" : "막을 곳을 정했어요 — 공이 옵니다");
 }
 function resolve() {
-  const m = M, s = S(), k = K(), f = m.shot.final, kp = k.p;
+  const m = M, s = S(), sp = SP(), f = m.shot.final, kp = KP();
   let res;
   const ax = Math.abs(f.x);
   if (ax > 1.08 || f.h > 1.08) res = "miss";
   else if (ax > 0.96 || f.h > 0.96) res = "post";
   else {
     const kx = m.keeper ? m.keeper.x : 0, kh = m.keeper ? m.keeper.h : 0.35;
-    let RX = 0.36 + kp.def * 0.04 + (kp.id === "mia" ? 0.08 : 0), RH = 0.5 + kp.def * 0.05;
+    let RX = 0.36 + kp.def * 0.04 + (kp.reach || 0), RH = 0.5 + kp.def * 0.05;
     if (!m.keeper) RX *= 0.65; else if (m.keeper.late) { RX *= 0.75; RH *= 0.8; }
     res = Math.abs(f.x - kx) <= RX && Math.abs(f.h - kh) <= RH ? "save" : "goal";
   }
   m.lastResult = res; s.rec.push(res === "goal"); if (res === "goal") s.goals++;
-  m.log.push({ round: m.round, shooter: s.p.id, res, x: +f.x.toFixed(2), h: +f.h.toFixed(2), power: +m.shot.power.toFixed(2), keeper: m.keeper && { x: m.keeper.x, h: m.keeper.h, late: m.keeper.late } });
-  if (res === "goal") { sfx.goal(); m.netShake = 1; confetti(); banner("⚽ 골!", pick(LINES.goal)); }
-  else if (res === "save") { sfx.save(); banner("🧤 막았어요!", `${kp.name}: "${pick(LINES.save)}"`); }
+  m.log.push({ round: m.round, shooter: sp.id, keeperId: kp.id, res, x: +f.x.toFixed(2), h: +f.h.toFixed(2), power: +m.shot.power.toFixed(2), keeper: m.keeper && { x: m.keeper.x, h: m.keeper.h, late: m.keeper.late } });
+  if (res === "goal") { sfx.goal(); m.netShake = 1; if (sp.team === "light") confetti(); banner("⚽ 골!", sp.team === "light" ? `${sp.name} — ${pick(LINES.goal)}` : `${sp.name}의 골`); }
+  else if (res === "save") { sfx.save(); if (kp.team === "light") confetti(); banner("🧤 막았어요!", kp.team === "light" ? `${kp.name}: "${pick(LINES.save)}"` : `${kp.name}의 선방`); }
   else if (res === "post") { sfx.post(); banner("골대!", pick(LINES.post), true); }
   else { sfx.miss(); banner("빗나갔어요", pick(LINES.miss), true); }
   m.phase = "result"; m.t = 0; hud();
@@ -225,14 +273,20 @@ function finish() {
   P.played++; if (m.vs === "cpu" && winner === a) P.wins++; P.best = Math.max(P.best, a.goals); save();
   sfx.whistle(); setTimeout(() => sfx.goal(), 300);
   const rec = (s) => `<div class="rec">${s.rec.map((g) => `<i class="${g ? "g" : "x"}"></i>`).join("")}</div>`;
+  const nameOf = (s) => (m.teamMode ? (s === a ? "빛 진영" : "드래곤 군단") : s.p.name);
+  const wp = winner.p;
+  // 승자가 빛 진영이면 그 선수가 한마디, 드래곤 군단이면 페이가 응원(적은 대사 없음)
+  const line = wp.team === "light" ? `<img src="${face(wp)}" style="width:36px;height:36px;border-radius:50%" alt=""><span>${m.teamMode ? "빛 진영" : wp.name}: "${pick(LINES.win)}"</span>`
+    : `<span>🦜 페이: 드래곤 군단이 이겼어요. 괜찮아요, 빛은 다시 모여요 — 다시 도전해요!</span>`;
+  const roster = (s) => (m.teamMode ? `<div class="roster">${[keeperOf(s), ...s.team].map((p, i) => `<img src="${face(p)}" title="${p.name}" class="${i ? "" : "gk"}" alt="">`).join("")}</div>` : "");
   screen(`<small style="letter-spacing:4px;opacity:.8;font-weight:800">${m.sudden ? "서든데스 끝" : "경기 끝"}</small>
-    <h1>${human ? "🏆" : "🤝"} ${winner.p.name} <b>승리!</b></h1>
-    <div class="fin"><div><img src="assets/players/${a.p.id}_face.png" alt=""><br><b>${a.p.name}</b>${rec(a)}</div><div class="vs">${a.goals} : ${b.goals}</div><div><img src="assets/players/${b.p.id}_face.png" alt=""><br><b>${b.p.name}</b>${rec(b)}</div></div>
-    <div class="pei"><img src="assets/players/${winner.p.id}_face.png" style="width:36px;height:36px;border-radius:50%" alt=""><span>${winner.p.name}: "${pick(LINES.win)}"</span></div>
+    <h1>${human ? "🏆" : "🤝"} ${nameOf(winner)} <b>승리!</b></h1>
+    <div class="fin"><div><img src="${face(a.p)}" alt=""><br><b>${nameOf(a)}</b>${rec(a)}${roster(a)}</div><div class="vs">${a.goals} : ${b.goals}</div><div><img src="${face(b.p)}" alt=""><br><b>${nameOf(b)}</b>${rec(b)}${roster(b)}</div></div>
+    <div class="pei">${line}</div>
     <button class="big" id="btnAgain">다시 대결</button>
-    <div class="rowbtn"><button class="small" id="btnSel">선수 바꾸기</button><button class="small" id="btnHome">처음으로</button></div>`);
-  $("btnAgain").onclick = () => start(PLAYERS.indexOf(a.p), PLAYERS.indexOf(b.p), m.vs);
-  $("btnSel").onclick = () => select(m.vs); $("btnHome").onclick = title;
+    <div class="rowbtn"><button class="small" id="btnSel">${m.teamMode ? "골키퍼 바꾸기" : "선수 바꾸기"}</button><button class="small" id="btnHome">처음으로</button></div>`);
+  $("btnAgain").onclick = () => (m.teamMode ? startTeam(a.keeper) : start(ROSTER.indexOf(a.p), ROSTER.indexOf(b.p), m.vs));
+  $("btnSel").onclick = () => (m.teamMode ? teamSelect() : select(m.vs)); $("btnHome").onclick = title;
   $("hud").hidden = true; $("pad").hidden = true;
 }
 
@@ -241,6 +295,7 @@ function hud() {
   if (!M) return;
   const m = M;
   $("scoreA").textContent = m.side[0].goals; $("scoreB").textContent = m.side[1].goals;
+  [0, 1].forEach((i) => { const s = m.side[i], p = m.teamMode ? (m.shooter === i ? shooterOf(s) : keeperOf(s)) : s.p, el = $(i ? "faceB" : "faceA"), src = face(p); if (el.getAttribute("src") !== src) el.src = src; el.title = p.name; });
   $("round").textContent = m.sudden ? "서든데스" : `${m.round} / ${KICKS}`;
   [0, 1].forEach((i) => { const s = m.side[i], n = Math.max(KICKS, s.rec.length + (m.sudden ? 1 : 0)); const el = $(i ? "slotsB" : "slotsA"); el.innerHTML = ""; for (let k = 0; k < n; k++) { const d = document.createElement("i"); if (k < s.rec.length) d.className = s.rec[k] ? "g" : "x"; else if (k === s.rec.length && m.shooter === i && m.phase !== "end") d.className = "now"; el.appendChild(d); } });
 }
@@ -303,7 +358,7 @@ function draw(dt) {
   for (const f of m.fx) { ctx.globalAlpha = Math.min(1, f.t); ctx.fillStyle = f.c; ctx.fillRect(f.x, f.y, f.r, f.r); } ctx.globalAlpha = 1;
 }
 function drawKeeper(m) {
-  const k = K().p, im = IMG[k.id]; if (!im) return;
+  const k = KP(), im = IMG[k.key + "_keep"] || IMG[k.key]; if (!im) return;
   let x = GOAL.cx, y = GOAL.y + 6, rot = 0, sc = 1;
   if (m.keeper) {
     const t = Math.min(1, m.keeper.t / 0.28), e = 1 - (1 - t) * (1 - t);
@@ -316,15 +371,31 @@ function drawKeeper(m) {
   ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
 }
 function drawShooter(m) {
-  const s = S().p, im = IMG[s.id]; if (!im) return;
-  const lung = m.shooterPos ? Math.max(0, 1 - m.t / 0.25) : 0;   // 찬 직후 살짝 앞으로
+  const s = SP(), im = IMG[s.key]; if (!im) return;
+  const h = KICK_H, w = h * im.width / im.height, bp = BALLPOS[s.key];
+  if (bp) {   // 그림 속 공을 게임 공 자리에 맞춘다. 공이 떠나면 그 공 자리는 지우고(발만 남김) 살짝 앞으로
+    const x0 = BALL0.x - bp[0] * w, y0 = BALL0.y - bp[1] * h, r = bp[2] * h;
+    const kicked = m.phase === "fly" || m.phase === "result";
+    const push = kicked ? Math.min(1, m.t / 0.2) * 6 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(x0 + w / 2, y0 + h * 0.98, w * 0.38, 8, 0, 0, 7); ctx.fill();
+    ctx.save();
+    if (kicked) { ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(BALL0.x, BALL0.y, r + 4, 0, 7, true); ctx.clip("evenodd"); }
+    ctx.drawImage(im, x0, y0 - push, w, h); ctx.restore();
+    return;
+  }
+  const lung = m.shooterPos ? Math.max(0, 1 - m.t / 0.25) : 0;
   const x = 112 + (m.shooterPos ? 22 * (1 - lung * 0.5) : 0), y = 612;
-  const h = 168, w = h * im.width / im.height;
   ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(x, y, w * 0.38, 9, 0, 0, 7); ctx.fill();
   ctx.drawImage(im, x - w / 2, y - h, w, h);
 }
 function drawBall(m) {
-  let x = BALL0.x, y = BALL0.y, r = 11, t = 0;
+  const bp = M ? BALLPOS[SP().key] : null, r0 = bp ? bp[2] * KICK_H : 11;
+  let x = BALL0.x, y = BALL0.y, r = r0, t = 0;
+  const atRest = !(m.phase === "fly" || m.phase === "result");
+  if (atRest && bp) {   // 서 있을 땐 그림 속 공이 게임 공 — 끌 때 고리만
+    if (m.phase === "aim" && m.drag) { ctx.strokeStyle = "rgba(255,211,74,.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(BALL0.x, BALL0.y, r0 + 6, 0, 7); ctx.stroke(); }
+    return;
+  }
   if (m.phase === "fly" || m.phase === "result") {
     t = Math.min(1, m.ball.t / m.shot.T);
     const f = m.shot.final, a = m.shot.apparent;
@@ -332,7 +403,7 @@ function drawBall(m) {
     x = lerp(BALL0.x, ax, t) + (tx - ax) * t * t;
     const arc = 26 + 50 * (1 - Math.min(1, f.h));
     y = lerp(BALL0.y, ty, t) - Math.sin(Math.PI * t) * arc;
-    r = lerp(11, 6, t);
+    r = lerp(r0, 6, t);
     if (m.phase === "result") {
       const u = Math.min(1, m.t / 0.6);
       if (m.lastResult === "goal") { y = ty + u * 6; }
@@ -412,14 +483,15 @@ const DPR = Math.min(2, window.devicePixelRatio || 1); cv.width = W * DPR; cv.he
 
 // ---------------------------------------------------------------- 시작
 load();
-Promise.all(PLAYERS.map((p) => new Promise((res) => { const im = new Image(); im.onload = () => { IMG[p.id] = im; res(); }; im.onerror = res; im.src = `assets/players/${p.id}.png`; }))).then(() => {
+Promise.all(ROSTER.flatMap((p) => [p.key, p.key + "_keep"]).map((key) => new Promise((res) => { const im = new Image(); im.onload = () => { IMG[key] = im; res(); }; im.onerror = res; im.src = `assets/players/${key}.png`; }))).then(() => {   // <id>_keep.png 가 있으면 골키퍼 전용 그림
   const hp = new URLSearchParams(location.hash.slice(1));
   // 개발용: #auto (자동 경기, 컴퓨터끼리처럼) · &fast · &2p · &a=areum&b=mia
   if (hp.has("auto") || hp.has("play")) {
     P.sound = false; AUTO = hp.has("auto"); FAST = hp.has("fast");
-    const a = PLAYERS.findIndex((p) => p.id === hp.get("a")), b = PLAYERS.findIndex((p) => p.id === hp.get("b"));
-    start(a >= 0 ? a : 0, b >= 0 ? b : 2, hp.has("2p") ? "2p" : "cpu");
+    const a = ROSTER.findIndex((p) => p.id === hp.get("a")), b = ROSTER.findIndex((p) => p.id === hp.get("b"));
+    if (hp.has("team")) startTeam(PLAYERS.find((p) => p.id === hp.get("gk")) || PLAYERS[2], DRAGONS.find((p) => p.id === hp.get("dgk")) || pick(DRAGONS));   // &team&gk=mia&dgk=dragon
+    else start(a >= 0 ? a : 0, b >= 0 ? b : 2, hp.has("2p") ? "2p" : "cpu");
   } else title();
   requestAnimationFrame(frame);
 });
-window.__pk = { get M() { return M; }, get mode() { return mode; }, P, PLAYERS, shoot, dive };
+window.__pk = { get M() { return M; }, get mode() { return mode; }, P, PLAYERS, DRAGONS, ROSTER, shoot, dive, startTeam };
