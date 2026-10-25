@@ -1,6 +1,6 @@
 // 실제 리그 세계 만들기 — tools/tm_scrape.py 가 트랜스퍼마켓에서 받은 game/leagues.json 을 게임 자료로 바꾼다.
 // 종합(50~120)은 시장가치·나이로 거꾸로 계산하고, 개인 능력치는 포지션·키·나이로 나눈다(트랜스퍼마켓에는 능력치가 없음).
-import { makePlayer, rng, toOld, fromOld, ageMult, clampA, PUREDAY, setNextId } from "./data.js?v=3";
+import { makePlayer, rng, toOld, fromOld, ageMult, clampA, PUREDAY, setNextId } from "./data.js?v=5";
 
 export const COUNTRY = { KR: { name: "대한민국", flag: "🇰🇷" }, DE: { name: "독일", flag: "🇩🇪" }, EN: { name: "잉글랜드", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" }, ES: { name: "스페인", flag: "🇪🇸" } };
 // 승강: [1↔2부 팀 수, 2↔3부 팀 수]

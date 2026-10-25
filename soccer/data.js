@@ -164,7 +164,7 @@ export const TACTIC_ITEMS = [
   ["mentality", "공격 성향", "수비적", "공격적"], ["press", "압박 강도", "물러서기", "전방 압박"], ["line", "수비 라인", "깊게", "높게"],
   ["width", "공격 폭", "좁게", "넓게"], ["passing", "패스 길이", "짧은 패스", "롱볼"], ["tempo", "템포", "느리게", "빠르게"],
 ];
-export const DEFAULT_TACTIC = { formation: "4-3-3", mentality: 50, press: 50, line: 50, width: 50, passing: 50, tempo: 50, slots: null, preset: "balanced" };
+export const DEFAULT_TACTIC = { formation: "4-3-3", mentality: 50, press: 50, line: 50, width: 50, passing: 50, tempo: 50, slots: null, preset: "balanced", v3: true };
 export const PRESETS = {
   balanced: { name: "균형", v: { mentality: 50, press: 50, line: 50, width: 50, passing: 50, tempo: 50 } },
   tiki: { name: "점유율(티키타카)", v: { mentality: 60, press: 60, line: 65, width: 55, passing: 10, tempo: 30 } },

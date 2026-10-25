@@ -1,6 +1,6 @@
 // 퓨어데이 FC — 2D 경기 엔진 (위에서 내려다보는 11대11). 단위 m, 경기장 68×105.
 // 팀 0(홈)은 아래(y=105) 골을 지키고 위(y=0)로 공격, 팀 1은 반대. 사람 입력은 팀별 input 객체로 받는다.
-import { FORMATIONS, ovr, toEngine, toOld, slotsOf, tacN } from "./data.js?v=3";
+import { FORMATIONS, ovr, toEngine, toOld, slotsOf, tacN } from "./data.js?v=5";
 
 export const PW = 68, PL = 105, GOAL_W = 7.32, GOAL_H = 2.44;
 const GX0 = PW / 2 - GOAL_W / 2, GX1 = PW / 2 + GOAL_W / 2;

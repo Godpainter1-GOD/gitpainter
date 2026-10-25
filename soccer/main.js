@@ -1,9 +1,9 @@
 // 퓨어데이 FC — 화면(처음·창단·구단 운영·전술·이적시장·경기·온라인)
-import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, POS, POS_KO, FORMATIONS, TACTIC_ITEMS, PRESETS, DEFAULT_TACTIC, autoLineup, teamRating, slotsOf, ATTRS, AMIN, AMAX, migrateTactic } from "./data.js?v=3";
-import { buildRealWorld, loadReal, flagOf, COUNTRY } from "./realdata.js?v=3";
-import { Match, drawMatch, PW, PL } from "./engine.js?v=4";
-import * as C from "./career.js?v=3";
-import { connect, makeCode } from "./net.js?v=3";
+import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, POS, POS_KO, FORMATIONS, TACTIC_ITEMS, PRESETS, DEFAULT_TACTIC, autoLineup, teamRating, slotsOf, ATTRS, AMIN, AMAX, migrateTactic } from "./data.js?v=5";
+import { buildRealWorld, loadReal, flagOf, COUNTRY } from "./realdata.js?v=5";
+import { Match, drawMatch, PW, PL } from "./engine.js?v=5";
+import * as C from "./career.js?v=5";
+import { connect, makeCode } from "./net.js?v=5";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -279,7 +279,7 @@ function myPlayerModal(pid) {
 
 // ---------------------------------------------------------------- 전술 빌더
 let selSlot = -1, dragMode = false;
-function myTactic() { return (S.tactics[C.MY] = migrateTactic(S.tactics[C.MY] || DEFAULT_TACTIC)); }
+function myTactic() { if (!S.tactics[C.MY] || !S.tactics[C.MY].v3) S.tactics[C.MY] = migrateTactic(S.tactics[C.MY] || DEFAULT_TACTIC); return S.tactics[C.MY]; }
 function tabTactic(el) {
   const t = myTactic(), lu = C.fixLineup(S, C.MY), slots = slotsOf(t), sq = C.squad(S, C.MY), me = C.club(S, C.MY);
   const custom = !!t.slots;
@@ -672,4 +672,4 @@ if (hp.has("demo")) {   // 개발: #demo 컴퓨터끼리 경기 화면 · #demo&
   OPT.halfSec = Number(hp.get("half")) || OPT.halfSec;
   startMatch({ teams: [mk(w.clubs[0]), mk(w.clubs[1])], human: [hp.has("human"), false], mode: "friendly" });
 } else title();
-window.__fc = { get S() { return S; }, get G() { return G; }, C };
+window.__fc = { get S() { return S; }, get G() { return G; }, C, get IN() { return IN; } };

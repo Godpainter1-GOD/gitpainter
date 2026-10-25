@@ -1,7 +1,7 @@
 // 퓨어데이 FC — 커리어 v3 (2026-10-25): 여러 리그·승강제, 실제 구단 맡기 / 뉴팀 창단, 운영비, 여름·겨울·FA 이적시장, 트레이드
-import { makeWorld, makeStarterSquad, ovr, marketValue, formulaValue, wageOf, money, autoLineup, teamRating, DEFAULT_TACTIC, PRESETS, FORMATIONS, migrateTactic, rng, getNextId, setNextId, AKEYS, clampA } from "./data.js?v=3";
-import { quickSim } from "./engine.js?v=4";
-import { PROMO, COUNTRY } from "./realdata.js?v=3";
+import { makeWorld, makeStarterSquad, ovr, marketValue, formulaValue, wageOf, money, autoLineup, teamRating, DEFAULT_TACTIC, PRESETS, FORMATIONS, migrateTactic, rng, getNextId, setNextId, AKEYS, clampA } from "./data.js?v=5";
+import { quickSim } from "./engine.js?v=5";
+import { PROMO, COUNTRY } from "./realdata.js?v=5";
 
 export const MY = "my";
 export const WINDOW_DAYS = 5;
@@ -77,7 +77,8 @@ function finLog(S, cid, amount, what) { if (cid === MY) { S.fin.unshift({ amount
 export function seasonLabel(S) { return `${S.year}/${String((S.year + 1) % 100).padStart(2, "0")}`; }
 export function standings(S, l = myLeague(S)) { return l.clubs.map((id) => ({ c: club(S, id), ...l.table[id] })).sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf); }
 export function fixLineup(S, cid) {
-  const sq = squad(S, cid); let t = S.tactics[cid] = migrateTactic(S.tactics[cid] || DEFAULT_TACTIC); const cur = S.lineups[cid];
+  const sq = squad(S, cid); if (!S.tactics[cid] || !S.tactics[cid].v3) S.tactics[cid] = migrateTactic(S.tactics[cid] || DEFAULT_TACTIC);   // 같은 객체를 계속 씀(화면에서 바꾼 값이 남도록)
+  const t = S.tactics[cid], cur = S.lineups[cid];
   const key = t.slots ? "custom:" + t.slots.map((s) => s[0]).join(",") : t.formation;
   const ok = cur && cur.key === key && cur.xi.length === 11 && cur.xi.every((id) => id && sq.some((p) => p.id === id));
   if (!ok) S.lineups[cid] = { ...autoLineup(sq, t), key };
