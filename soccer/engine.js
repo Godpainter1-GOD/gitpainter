@@ -164,7 +164,7 @@ export class Match {
     if (p.think > 0 && (press > 2.2 || !p.plan)) { if (p.plan) { p.tx = p.x + p.plan.dx * 6; p.ty = p.y + p.plan.dy * 6; p.run = 0.86; } else { p.tx = p.x + (p.t === 0 ? 0 : 0); p.ty = p.y + (p.t === 0 ? -2 : 2); p.run = 0.5; } return; }
     p.think = ([0.45, 0.32, 0.24][this.diff] + this.rand() * 0.15) * (1.25 - p.d.iq / 400) * (1 - tn.tempo * 0.25);
     // 슛
-    const shotRange = 19 + p.d.sho / 9 + tn.ment * 2;
+    const shotRange = 21 + p.d.sho / 9 + tn.ment * 2;
     const angleOK = Math.abs(p.x - PW / 2) < 20;
     if (gd < shotRange && angleOK && (this.rand() < 0.55 + (shotRange - gd) / 25 || press < 1.6)) return this.shoot(i, null, 0.8 + this.rand() * 0.2);
     // 패스 후보
@@ -327,7 +327,7 @@ export class Match {
       if (Math.abs(b.y - gy) < 3.2 && hyp(gk.x - b.x, gk.y - b.y) < reach + 0.8 && b.z < 2.7) {
         b.shot.rolled = true;
         const onTarget = b.x > GX0 - 0.2 && b.x < GX1 + 0.2;
-        const pSave = clamp(0.36 + (gk.d.gk - b.shot.sho) / 110 + (hyp(b.vx, b.vy) < 18 ? 0.12 : 0) - (onTarget && Math.abs(b.x - PW / 2) > 2.6 ? 0.12 : 0), 0.1, 0.85);
+        const pSave = clamp(0.3 + (gk.d.gk - b.shot.sho) / 110 + (hyp(b.vx, b.vy) < 18 ? 0.12 : 0) - (onTarget && Math.abs(b.x - PW / 2) > 2.6 ? 0.12 : 0), 0.1, 0.85);
         if (this.rand() < pSave) {
           if (onTarget) this.stats.onTarget[b.shot.team]++;
           if (this.rand() < 0.55 && b.z < 2) { b.owner = this.ps.indexOf(gk); b.last = gk.t; b.shot = null; gk.hold = 0; this.emit("save", `${gk.d.name} 선방!`, { team: gk.t }); }
@@ -337,11 +337,12 @@ export class Match {
       }
     }
     // 헤딩: 떠 있는 공 근처 선수들이 다툰다
-    if (b.z > 1.2 && b.z < 2.9 && b.vz < 2) {
+    if (b.z > 1.2 && b.z < 2.9 && b.vz < 0) {   // 떨어지는 공만
       const cand = [];
       for (let i = 0; i < this.ps.length; i++) { const p = this.ps[i]; if (p.kickCd > 0 || p.stun > 0 || p.slide || p.pos === "GK" || (b.kicker === i)) continue; const d = hyp(p.x - b.x, p.y - b.y); if (d < 1.5) cand.push([i, p.d.hea * 0.7 + p.d.phy * 0.3 + this.rand() * 25 - d * 8]); }
       if (cand.length) {
         cand.sort((a, c) => c[1] - a[1]); const i = cand[0][0], p = this.ps[i], gy = this.goalY(p.t), gd = hyp(PW / 2 - p.x, gy - p.y);
+        if (i === b.target && !(gd < 15 && Math.abs(p.x - PW / 2) < 14)) { b.owner = i; b.last = p.t; b.target = -1; b.z = 0; b.vx = b.vy = b.vz = 0; b.shot = null; p.think = 0.3; return; }   // 받을 선수는 가슴으로 받기
         b.last = p.t; b.kicker = i; b.shot = null; p.kickCd = 0.3; b.restart = null;
         if (gd < 15 && Math.abs(p.x - PW / 2) < 14) {   // 헤딩슛
           const side = (this.gk(1 - p.t).x < PW / 2 ? 1 : -1) * (0.3 + this.rand() * 0.6), tx = PW / 2 + side * 3.2;

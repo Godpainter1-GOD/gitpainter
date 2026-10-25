@@ -1,6 +1,6 @@
 // 퓨어데이 FC — 커리어 v3 (2026-10-25): 여러 리그·승강제, 실제 구단 맡기 / 뉴팀 창단, 운영비, 여름·겨울·FA 이적시장, 트레이드
 import { makeWorld, makeStarterSquad, ovr, marketValue, formulaValue, wageOf, money, autoLineup, teamRating, DEFAULT_TACTIC, PRESETS, FORMATIONS, migrateTactic, rng, getNextId, setNextId, AKEYS, clampA } from "./data.js?v=3";
-import { quickSim } from "./engine.js?v=3";
+import { quickSim } from "./engine.js?v=4";
 import { PROMO, COUNTRY } from "./realdata.js?v=3";
 
 export const MY = "my";
