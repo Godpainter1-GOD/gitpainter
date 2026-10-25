@@ -188,14 +188,14 @@ export function tacN(t) { const n = (k) => ((t[k] ?? 50) - 50) / 50; return { me
 export function autoLineup(squad, tactic) {
   const slots = typeof tactic === "string" ? FORMATIONS[tactic] : slotsOf(tactic), used = new Set(), xi = new Array(11).fill(null);
   const order = slots.map((s, i) => i).sort((a, b) => (slots[a][0] === "GK" ? -1 : slots[b][0] === "GK" ? 1 : 0));
-  for (const i of order) { let best = null, bv = -1; for (const p of squad) { if (used.has(p.id) || p.injured) continue; const v = fitOvr(p, slots[i][0]); if (v > bv) { bv = v; best = p; } } if (best) { xi[i] = best.id; used.add(best.id); } }
+  for (const i of order) { let best = null, bv = -1; for (const p of squad) { if (used.has(p.id) || p.inj > 0 || p.sus > 0) continue; const v = fitOvr(p, slots[i][0]); if (v > bv) { bv = v; best = p; } } if (best) { xi[i] = best.id; used.add(best.id); } }
   const bench = squad.filter((p) => !used.has(p.id)).sort((a, b) => ovr(b) - ovr(a)).slice(0, 9).map((p) => p.id);
   return { xi, bench };
 }
 export function teamRating(squad, lineup, tactic) {
   const slots = typeof tactic === "string" ? FORMATIONS[tactic] : slotsOf(tactic);
   const byId = new Map(squad.map((p) => [p.id, p]));
-  const all = lineup.xi.map((id, i) => { const p = byId.get(id); return p ? fitOvr(p, slots[i][0]) : AMIN; });
+  const all = lineup.xi.map((id, i) => { const p = byId.get(id); return p ? fitOvr(p, slots[i][0]) * (0.9 + 0.1 * Math.min(100, p.fit ?? 100) / 100) : AMIN; });   // 체력이 떨어지면 조금 약해짐
   return { ovr: Math.round(all.reduce((s, v) => s + v, 0) / 11) };
 }
 // 경기 엔진용 선수 복사본: 능력치를 20~97 기준으로

@@ -1,6 +1,6 @@
 // 퓨어데이 FC — 2D 경기 엔진 (위에서 내려다보는 11대11). 단위 m, 경기장 68×105.
 // 팀 0(홈)은 아래(y=105) 골을 지키고 위(y=0)로 공격, 팀 1은 반대. 사람 입력은 팀별 input 객체로 받는다.
-import { FORMATIONS, ovr, toEngine, toOld, slotsOf, tacN } from "./data.js?v=5";
+import { FORMATIONS, ovr, toEngine, toOld, slotsOf, tacN } from "./data.js?v=6";
 
 export const PW = 68, PL = 105, GOAL_W = 7.32, GOAL_H = 2.44;
 const GX0 = PW / 2 - GOAL_W / 2, GX1 = PW / 2 + GOAL_W / 2;
@@ -26,7 +26,7 @@ export class Match {
       tm.players.forEach((raw, i) => {
         const d = toEngine(raw);
         const [pos, ax, ay] = slots[i];
-        this.ps.push({ t, i, pos, d, ax, ay, x: 0, y: 0, vx: 0, vy: 0, fx: 0, fy: t === 0 ? -1 : 1, stun: 0, kickCd: 0, think: this.rand() * 0.3, tackleT: 0, plan: null, num: raw.num && /^\d+$/.test(raw.num) ? +raw.num : i === 0 ? 1 : i + 1, goals: 0, energy: 1,
+        this.ps.push({ t, i, pos, d, ax, ay, x: 0, y: 0, vx: 0, vy: 0, fx: 0, fy: t === 0 ? -1 : 1, stun: 0, kickCd: 0, think: this.rand() * 0.3, tackleT: 0, plan: null, num: raw.num && /^\d+$/.test(raw.num) ? +raw.num : i === 0 ? 1 : i + 1, goals: 0, energy: Math.min(1, 0.55 + 0.45 * ((raw.fit ?? 100) / 100)),
           jit: { x: (this.rand() - 0.5), y: (this.rand() - 0.5) } });
       });
     }
@@ -39,7 +39,7 @@ export class Match {
   ownGoalY(t) { return t === 0 ? PL : 0; }
   prog(t, y) { return t === 0 ? (PL - y) / PL : y / PL; }   // 0 = 우리 골, 1 = 상대 골
   maxSpeed(p) { return (5.4 + p.d.pac * 0.042) * (0.78 + 0.22 * p.energy); }
-  team(t) { return this.ps.filter((p) => p.t === t); }
+  team(t) { return this.ps.filter((p) => p.t === t && !p.off); }
   gk(t) { return this.ps.find((p) => p.t === t && p.pos === "GK") || this.ps.find((p) => p.t === t); }
   emit(type, text, extra = {}) { const e = { type, text, t: this.minute(), ...extra }; this.events.push(e); if (this.o.onEvent) this.o.onEvent(e); }
   minute() { return Math.min(90, Math.floor((this.half - 1) * 45 + (this.t / this.halfSec) * 45)); }
@@ -94,7 +94,7 @@ export class Match {
       if (want) {
         // 공에 가장 가까운 선수(골키퍼 빼고)
         let best = -1, bd = 1e9;
-        this.ps.forEach((p, i) => { if (p.t !== t || p.pos === "GK") return; const d = hyp(p.x - b.x, p.y - b.y) + (i === this.ctrl[t] ? -2 : 0); if (d < bd) { bd = d; best = i; } });
+        this.ps.forEach((p, i) => { if (p.t !== t || p.pos === "GK" || p.off) return; const d = hyp(p.x - b.x, p.y - b.y) + (i === this.ctrl[t] ? -2 : 0); if (d < bd) { bd = d; best = i; } });
         if (best !== this.ctrl[t]) { this.ctrl[t] = best; this.ctrlHold[t] = 0.8; }
       }
     }
@@ -104,6 +104,7 @@ export class Match {
   think(i, dt) {
     const p = this.ps[i], b = this.ball, t = p.t, tn = this.teams[t].tn;
     p.tx = p.x; p.ty = p.y; p.run = 0.75;
+    if (p.off) return;
     if (p.slide || p.stun > 0) { p.tx = p.x; p.ty = p.y; return; }
     if (this.ctrl[t] === i) return this.humanControl(i, dt);
     const owner = b.owner >= 0 ? this.ps[b.owner] : null;
@@ -295,6 +296,7 @@ export class Match {
 
   // ------------------------------------------------------------ 움직이기
   move(p, dt) {
+    if (p.off) { p.x = -30; p.y = -30; p.vx = p.vy = 0; return; }
     if (p.slide) {   // 다리태클: 바라보는 쪽으로 미끄러진다
       const sl = p.slide; sl.t -= dt; const sp = 8.5 * Math.max(0.2, sl.t / 0.5);
       p.vx = sl.dx * sp; p.vy = sl.dy * sp; p.x = clamp(p.x + p.vx * dt, -2, PW + 2); p.y = clamp(p.y + p.vy * dt, -3, PL + 3);
@@ -339,7 +341,7 @@ export class Match {
     // 헤딩: 떠 있는 공 근처 선수들이 다툰다
     if (b.z > 1.2 && b.z < 2.9 && b.vz < 0) {   // 떨어지는 공만
       const cand = [];
-      for (let i = 0; i < this.ps.length; i++) { const p = this.ps[i]; if (p.kickCd > 0 || p.stun > 0 || p.slide || p.pos === "GK" || (b.kicker === i)) continue; const d = hyp(p.x - b.x, p.y - b.y); if (d < 1.5) cand.push([i, p.d.hea * 0.7 + p.d.phy * 0.3 + this.rand() * 25 - d * 8]); }
+      for (let i = 0; i < this.ps.length; i++) { const p = this.ps[i]; if (p.kickCd > 0 || p.stun > 0 || p.slide || p.off || p.pos === "GK" || (b.kicker === i)) continue; const d = hyp(p.x - b.x, p.y - b.y); if (d < 1.5) cand.push([i, p.d.hea * 0.7 + p.d.phy * 0.3 + this.rand() * 25 - d * 8]); }
       if (cand.length) {
         cand.sort((a, c) => c[1] - a[1]); const i = cand[0][0], p = this.ps[i], gy = this.goalY(p.t), gd = hyp(PW / 2 - p.x, gy - p.y);
         if (i === b.target && !(gd < 15 && Math.abs(p.x - PW / 2) < 14)) { b.owner = i; b.last = p.t; b.target = -1; b.z = 0; b.vx = b.vy = b.vz = 0; b.shot = null; p.think = 0.3; return; }   // 받을 선수는 가슴으로 받기
@@ -363,7 +365,7 @@ export class Match {
     // 잡기
     let best = -1, bd = 1e9;
     for (let i = 0; i < this.ps.length; i++) {
-      const p = this.ps[i]; if (p.kickCd > 0 || p.stun > 0) continue;
+      const p = this.ps[i]; if (p.kickCd > 0 || p.stun > 0 || p.off) continue;
       if (b.shot && p.pos === "GK" && p.t !== b.shot.team) continue;   // 슛은 선방 판정으로만
       const isGK = p.pos === "GK" && Math.abs(p.y - this.ownGoalY(p.t)) < 17 && p.x > 13 && p.x < 55;
       const d = hyp(p.x - b.x, p.y - b.y), R = isGK ? 1.5 : 1.05, Z = isGK ? 2.6 : 1.7;
@@ -375,6 +377,7 @@ export class Match {
       const pCtrl = sp < 14 ? 1 : clamp(0.75 - (sp - 14) / 30 + p.d.dri / 400 + (mate ? 0.15 : 0), 0.25, 0.95);
       if (this.rand() < pCtrl * Math.min(1, dt * 30)) {
         if (b.shot && p.t !== b.shot.team && p.pos !== "GK") this.emit("block", `${p.d.name} 막았어요`, { team: p.t });
+        if (b.kicker >= 0 && b.kicker !== best && this.ps[b.kicker].t === p.t) { p.assistBy = b.kicker; p.assistT = this.t + (this.half - 1) * 1000; } else if (b.kicker >= 0 && this.ps[b.kicker].t !== p.t) p.assistBy = null;
         b.owner = best; b.last = p.t; b.shot = null; b.restart = null; b.target = -1;
         p.think = 0.3 + this.rand() * 0.35; p.plan = null;
       } else if (sp > 14) { b.vx *= -0.35; b.vy *= -0.35; b.vx += (this.rand() - 0.5) * 6; b.last = p.t; b.shot = null; p.kickCd = 0.2; }
@@ -385,7 +388,7 @@ export class Match {
     const b = this.ball; if (b.owner < 0) return;
     const o = this.ps[b.owner];
     for (let i = 0; i < this.ps.length; i++) {
-      const p = this.ps[i]; if (p.t === o.t || p.stun > 0 || p.pos === "GK") continue;
+      const p = this.ps[i]; if (p.t === o.t || p.stun > 0 || p.pos === "GK" || p.off) continue;
       if (this.ctrl[p.t] === i || p.slide || p.down > 0) continue;     // 사람은 태클 키로
       const d = hyp(p.x - o.x, p.y - o.y);
       if (d > 1.7 && d < 3.2 && !b.restart && this.rand() < dt * [0.25, 0.4, 0.55][this.diff]) {   // 뒤쫓다 다리태클
@@ -457,9 +460,19 @@ export class Match {
     const b = this.ball, t = o.t, gyDef = this.ownGoalY(p.t);
     o.stun = 1; o.down = 1; p.fouls = (p.fouls || 0) + 1;
     const inBox = Math.abs(o.y - gyDef) < 16.5 && o.x > PW / 2 - 20.16 && o.x < PW / 2 + 20.16;
-    this.emit("foul", `반칙! ${p.d.name}${p.fouls >= 2 ? " (경고)" : ""}`, { team: p.t });
+    this.emit("foul", `반칙! ${p.d.name}`, { team: p.t, pid: p.d.id });
+    const r = this.rand();
+    if (r < 0.04 || (r < 0.42 && p.yc)) { p.yc = (p.yc || 0) + 1; this.sendOff(p, r < 0.04 && p.yc < 2 ? "바로 퇴장" : "경고 2장"); }
+    else if (r < 0.42) { p.yc = 1; this.emit("yellow", `🟨 경고: ${p.d.name}`, { team: p.t, pid: p.d.id }); }
     if (inBox) this.restart("penalty", t, PW / 2, gyDef + (p.t === 0 ? -11 : 11));
     else this.restart("free", t, clamp(o.x, 1, PW - 1), clamp(o.y, 1, PL - 1));
+  }
+
+  sendOff(p, why) {
+    p.off = true; p.slide = null; p.vx = p.vy = 0;
+    const b = this.ball; if (b.owner === this.ps.indexOf(p)) b.owner = -1;
+    if (this.ctrl[p.t] === this.ps.indexOf(p)) this.ctrl[p.t] = -1;
+    this.emit("red", `🟥 퇴장: ${p.d.name} (${why})`, { team: p.t, pid: p.d.id });
   }
 
   // ------------------------------------------------------------ 라인 밖·골
@@ -499,7 +512,9 @@ export class Match {
     this.score[team]++; const b = this.ball; const k = b.kicker >= 0 ? this.ps[b.kicker] : null;
     const scorer = k && k.t === team ? k : null; if (scorer) scorer.goals++;
     this.stats.onTarget[team]++;
-    this.emit("goal", `골! ${scorer ? scorer.d.name : this.teams[team].name}`, { team, scorer: scorer ? scorer.d.id : null, name: scorer ? scorer.d.name : "" });
+    const ap = scorer && scorer.assistBy != null && this.ps[scorer.assistBy] && this.ps[scorer.assistBy].t === team && this.t + (this.half - 1) * 1000 - (scorer.assistT || 0) < 25 ? this.ps[scorer.assistBy] : null;
+    if (scorer) scorer.assistBy = null;
+    this.emit("goal", `골! ${scorer ? scorer.d.name : this.teams[team].name}`, { team, scorer: scorer ? scorer.d.id : null, name: scorer ? scorer.d.name : "", assist: ap ? ap.d.id : null, assistName: ap ? ap.d.name : "" });
     this.phase = "goal"; this.timer = 2.4; this.kickTeam = 1 - team; b.owner = -1; b.vx *= 0.2; b.vy *= 0.2; b.shot = null;
   }
 
@@ -555,7 +570,8 @@ export function drawMatch(ctx, m, view) {
   const R = Math.max(9, s * (view.big ?? 1.45));
   const order = m.ps.map((p, i) => i).sort((a, c) => (flip ? -1 : 1) * (m.ps[a].y - m.ps[c].y));
   for (const i of order) {
-    const p = m.ps[i], [X, Y] = T(p.x, p.y), tm = m.teams[p.t];
+    const p = m.ps[i]; if (p.off) continue;
+    const [X, Y] = T(p.x, p.y), tm = m.teams[p.t];
     if (X < -20 || Y < -20 || X > w + 20 || Y > h + 20) continue;
     ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(X + 2, Y + R * 0.7, R * 0.9, R * 0.4, 0, 0, 7); ctx.fill();
     const isGK = p.pos === "GK";
@@ -614,9 +630,9 @@ function luminance(hex) { const n = parseInt(hex.slice(1), 16); return (((n >> 1
 // ---------------------------------------------------------------- 빠른 경기(결과만): 팀 종합·전술로 골 수
 export function quickSim(ratingA, ratingB, tacA, tacB, rand = Math.random) {
   const A = tacN(tacA), B = tacN(tacB); ratingA = toOld(ratingA); ratingB = toOld(ratingB);
-  const att = (r, t) => 1.25 * Math.exp((r - 70) / 14) * (1 + t.ment * 0.15 + t.tempo * 0.04);
-  const def = (r, t) => Math.exp((r - 70) / 16) * (1 - t.ment * 0.12) * (1 - Math.max(0, t.press) * 0.04) * (1 + t.line * -0.02);
-  const la = Math.max(0.2, att(ratingA, A) / def(ratingB, B) * 1.15 + 0.15), lb = Math.max(0.2, att(ratingB, B) / def(ratingA, A) * 1.0);
+  const att = (r, t) => 1.2 * Math.exp((r - 70) / 19) * (1 + t.ment * 0.15 + t.tempo * 0.04);   // 실력 차가 커도 골이 너무 많지 않게
+  const def = (r, t) => Math.exp((r - 70) / 21) * (1 - t.ment * 0.12) * (1 - Math.max(0, t.press) * 0.04) * (1 + t.line * -0.02);
+  const la = Math.min(3.2, Math.max(0.25, att(ratingA, A) / def(ratingB, B) * 1.12 + 0.12)), lb = Math.min(3, Math.max(0.2, att(ratingB, B) / def(ratingA, A)));
   return [poisson(la, rand), poisson(lb, rand)];
 }
 function poisson(l, r) { let L = Math.exp(-l), k = 0, p = 1; do { k++; p *= r(); } while (p > L && k < 12); return k - 1; }
