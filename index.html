@@ -61,12 +61,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 40p
 <nav id="nav"></nav>
 <main id="main"></main>
 <footer>여호수아 시즌1은 기존 Joshua-story 사이트에서 열립니다.</footer>
-<script src="data.js?v=202610260109"></script>
+<script src="data.js?v=202610260231"></script>
 <script>
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nav = document.getElementById('nav'), main = document.getElementById('main');
 for (const s of window.PORTAL.series) {
-  const own = s.id.startsWith('pureday');  // 2026-10-20 시즌2 카드(pureday2)도 자체 뷰어
+  const own = s.id.startsWith('pureday') || s.id === 'mingtori';  // 2026-10-20 시즌2 카드(pureday2)도 자체 뷰어 · 2026-10-26 외전 밍토리도
   const first = s.episodes[0];
   const read = e => own ? `viewer.html?s=${s.id}&ep=${e.num}` : e.mobile;
   nav.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${esc(s.title)}</a>`);
