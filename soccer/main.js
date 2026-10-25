@@ -1,8 +1,9 @@
 // 퓨어데이 FC — 화면(처음·창단·구단 운영·전술·이적시장·경기·온라인)
-import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, FLAG, POS_KO, FORMATIONS, TACTIC_LABEL, DEFAULT_TACTIC, autoLineup, teamRating } from "./data.js?v=2";
-import { Match, drawMatch, PW, PL } from "./engine.js?v=2";
-import * as C from "./career.js?v=2";
-import { connect, makeCode } from "./net.js?v=2";
+import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, POS, POS_KO, FORMATIONS, TACTIC_ITEMS, PRESETS, DEFAULT_TACTIC, autoLineup, teamRating, slotsOf, ATTRS, AMIN, AMAX, migrateTactic } from "./data.js?v=3";
+import { buildRealWorld, loadReal, flagOf, COUNTRY } from "./realdata.js?v=3";
+import { Match, drawMatch, PW, PL } from "./engine.js?v=3";
+import * as C from "./career.js?v=3";
+import { connect, makeCode } from "./net.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -27,7 +28,7 @@ const FACES = {};
 const faceImg = (p) => (p.face ? `<img class="face" src="assets/faces/${p.face}_face.png" alt="">` : "");
 const posCls = (pos) => (pos === "GK" ? "GK" : ["CB", "LB", "RB"].includes(pos) ? "D" : ["DM", "CM", "AM"].includes(pos) ? "M" : "F");
 const posTag = (pos) => `<span class="pos ${posCls(pos)}">${pos}</span>`;
-const ovCol = (o) => (o >= 80 ? "#7fe07a" : o >= 72 ? "#c8f07a" : o >= 65 ? "#ffd34a" : o >= 58 ? "#ffb35a" : "#ff8a7a");
+const ovCol = (o) => (o >= 105 ? "#7fe07a" : o >= 95 ? "#c8f07a" : o >= 85 ? "#ffd34a" : o >= 75 ? "#ffb35a" : "#ff8a7a");   // 50~120
 const ovTag = (o) => `<span class="ov" style="background:${ovCol(o)}">${o}</span>`;
 const badge = (c, size = 46) => `<span class="badge" style="width:${size}px;height:${size}px;background:${c.c1};border-color:${c.c2};color:${lum(c.c1) > 0.6 ? "#111" : "#fff"};font-size:${Math.round(size / 3.6)}px">${esc(c.short)}</span>`;
 function lum(hex) { const n = parseInt(hex.slice(1), 16); return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255; }
@@ -35,27 +36,69 @@ let toastT = 0;
 function toast(msg, ms = 2200) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms); }
 function modal(html) { const m = $("modal"); m.innerHTML = `<div class="sheet">${html}</div>`; m.hidden = false; m.onclick = (e) => { if (e.target === m) closeModal(); }; return m; }
 function closeModal() { $("modal").hidden = true; }
-function persist() { if (S) C.save(S); }
+function persist() { if (S && !C.save(S)) toast("저장 공간이 모자라 저장하지 못했어요"); }
+// 실제 리그 세계(한 번 만들어 두고 친선·온라인에 씀)
+let REAL = null;
+async function realWorld() { if (REAL) return REAL; toast("실제 리그 자료를 불러오는 중…", 4000); const J = await loadReal(); REAL = buildRealWorld(J); return REAL; }
+const MY_LABEL = (c) => (c && c.my ? `<span class="tag">MY TEAM</span>` : "");
 
 // ---------------------------------------------------------------- 처음 화면
 function title() {
   app.hidden = false; $("matchView").hidden = true;
+  const me = S && C.club(S, C.MY);
   app.innerHTML = `<div class="title"><small>PUREDAY FOOTBALL</small><h1><b>퓨어데이</b> FC</h1>
-    <p>뉴팀을 창단해 나만의 <b>마이 팀</b>으로 키워요. 전술을 짜고, 운영비로 여름·겨울·FA 이적시장에서 선수를 사고팔고 트레이드해요.</p></div>
+    <p>실제 리그 12개(K리그 1·2·3, 분데스리가 1·2·3, 잉글랜드 1·2·3, 라리가 1·2·3)의 트랜스퍼마켓 선수로 구단을 맡거나, 뉴팀을 창단해 <b>마이 팀</b>으로 키워요.</p></div>
     <div class="stack">
-      ${S ? `<button class="big" id="bCont">▶ 커리어 이어하기<br><small style="font-weight:700">${esc(C.club(S, C.MY).name)} · ${C.seasonLabel(S)} · ${C.PHASE_KO[S.phase]}</small></button>` : ""}
-      <button class="big ${S ? "alt" : ""}" id="bNew">🏟 뉴팀 창단 (새 커리어)</button>
+      ${S ? `<button class="big" id="bCont">▶ 커리어 이어하기<br><small style="font-weight:700">${esc(me.name)} · ${esc(C.myLeague(S).name)} · ${C.seasonLabel(S)}</small></button>` : ""}
+      <button class="big ${S ? "alt" : ""}" id="bNew">🏟 새 커리어 (구단 맡기 / 뉴팀 창단)</button>
       <button class="big green" id="bOnline">🌐 친구와 온라인 대전</button>
       <button class="big alt" id="bFriendly">⚽ 친선 경기 (컴퓨터 / 둘이서)</button>
       <div class="card"><div class="lbl" style="margin-top:0">컴퓨터 실력</div><div class="seg" id="sDiff">${["쉬움", "보통", "어려움"].map((n, i) => `<button class="sm ${OPT.diff === i ? "on" : ""}" data-v="${i}">${n}</button>`).join("")}</div>
         <div class="lbl">경기 시간</div><div class="seg" id="sTime">${[[90, "3분"], [150, "5분"], [240, "8분"]].map(([v, n]) => `<button class="sm ${OPT.halfSec === v ? "on" : ""}" data-v="${v}">${n}</button>`).join("")}</div></div>
       <div class="row c"><button class="sm" id="bKeys">⌨ 키보드 설정</button><button class="sm" id="bHow">하는 방법</button></div>
+      <p class="sub" style="text-align:center">선수·구단·시장가치·FA 명단: transfermarkt.com (2026-10-25 기준). 개인 능력치는 시장가치·포지션·키·나이로 추정한 값이에요.</p>
     </div>`;
   if (S) $("bCont").onclick = hub;
-  $("bNew").onclick = () => (S ? confirmNew() : createTeam());
+  $("bNew").onclick = () => (S ? confirmNew() : newCareerFlow());
   $("bFriendly").onclick = friendly; $("bOnline").onclick = online; $("bHow").onclick = how; $("bKeys").onclick = () => keySettings();
   $("sDiff").querySelectorAll("button").forEach((b) => (b.onclick = () => { OPT.diff = +b.dataset.v; saveOpt(); title(); }));
   $("sTime").querySelectorAll("button").forEach((b) => (b.onclick = () => { OPT.halfSec = +b.dataset.v; saveOpt(); title(); }));
+}
+// 구단 고르기(실제 리그): 나라 → 리그 → 구단. onPick(clubId, world)
+async function clubPicker(titleText, onPick, opts = {}) {
+  const W = await realWorld(); let country = opts.country || "KR", lg = null;
+  const draw = () => {
+    const leagues = W.leagues.filter((l) => l.country === country);
+    lg = lg && leagues.some((l) => l.id === lg) ? lg : leagues[0].id;
+    const clubs = W.clubs.filter((c) => c.league === lg).sort((a, b) => b.sqVal - a.sqVal);
+    modal(`<h2>${esc(titleText)}</h2><div class="seg" style="margin-top:8px">${Object.entries(COUNTRY).map(([k, v]) => `<button class="sm ${country === k ? "on" : ""}" data-c="${k}">${v.flag} ${v.name}</button>`).join("")}</div>
+      <div class="seg" style="margin-top:6px">${leagues.map((l) => `<button class="sm ${lg === l.id ? "on" : ""}" data-l="${l.id}">${esc(l.name)}</button>`).join("")}</div>
+      ${opts.newTeam ? `<button class="big green" id="pkNew" style="width:100%;margin-top:10px">🏟 이 리그에서 뉴팀 창단</button>` : ""}
+      <table style="margin-top:8px"><tr><th>구단</th><th class="n">선수단 가치</th><th class="n">평판</th></tr>${clubs.map((c) => `<tr class="click" data-k="${c.id}"><td>${badge(c, 24)} ${esc(c.name)}</td><td class="n">${money(c.sqVal)}</td><td class="n">${c.rep}</td></tr>`).join("")}</table>
+      <button class="sm" id="pkX" style="margin-top:10px">닫기</button>`);
+    $("modal").querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => { country = b.dataset.c; lg = null; draw(); }));
+    $("modal").querySelectorAll("[data-l]").forEach((b) => (b.onclick = () => { lg = b.dataset.l; draw(); }));
+    $("modal").querySelectorAll("tr[data-k]").forEach((tr) => (tr.onclick = () => { closeModal(); onPick(tr.dataset.k, W, lg); }));
+    if (opts.newTeam) $("pkNew").onclick = () => { closeModal(); opts.newTeam(lg, W); };
+    $("pkX").onclick = closeModal;
+  };
+  draw();
+}
+function newCareerFlow() {
+  app.innerHTML = `<div class="title" style="padding-top:14px"><small>NEW CAREER</small><h1>새 <b>커리어</b></h1><p>어디서 시작할까요?</p></div>
+    <div class="stack">
+      <button class="big" id="cReal">🌍 실제 리그 (트랜스퍼마켓 2026)<br><small style="font-weight:700">구단을 맡거나, 원하는 리그에서 뉴팀 창단</small></button>
+      <button class="big alt" id="cPure">✨ 퓨어 리그 (가상 10구단)<br><small style="font-weight:700">빛 진영 FC·드래곤 FC 와 함께</small></button>
+      <button class="sm" id="cBack">처음으로</button></div>`;
+  $("cBack").onclick = title;
+  $("cPure").onclick = () => createTeam({ mode: "pure", world: makeWorld(), league: "pure" });
+  $("cReal").onclick = () => clubPicker("구단을 고르거나 뉴팀을 창단하세요", (cid, W) => {
+    const c = W.clubs.find((x) => x.id === cid);
+    modal(`<h2>${esc(c.name)} 감독으로 시작할까요?</h2><p class="sub">${esc(W.leagues.find((l) => l.id === c.league).name)} · 선수단 가치 ${money(c.sqVal)} · 운영비 ${money(c.budget)}</p>
+      <div class="row" style="margin-top:12px"><button class="big" id="tkGo">감독 부임</button><button class="sm" id="tkNo">다시 고르기</button></div>`);
+    $("tkGo").onclick = () => { closeModal(); S = C.newCareer({ world: W, mode: "real", take: cid }); persist(); tab = "home"; hub(); toast(`${c.name} 감독 부임! 여름 이적시장부터 시작해요.`); };
+    $("tkNo").onclick = () => { closeModal(); $("cReal").click(); };
+  }, { newTeam: (lg, W) => createTeam({ mode: "real", world: W, league: lg }) });
 }
 function confirmNew() {
   modal(`<h2>새 커리어를 시작할까요?</h2><p class="sub" style="margin-top:6px">지금 커리어(${esc(C.club(S, C.MY).name)})는 지워져요.</p><div class="row" style="margin-top:14px"><button class="big" id="mYes">새로 시작</button><button class="sm" id="mNo">취소</button></div>`);
@@ -66,7 +109,8 @@ function how() {
     <div class="msg"><b>경기 조작(폰)</b> — 아래 왼쪽 칸을 누르고 끌면 노란 고리 선수가 움직여요. <b>패스</b>: 바라보는 쪽 동료에게(공이 없으면 선수 바꾸기), <b>슛</b>: 상대 골로(공이 없으면 태클), <b>질주</b>: 누르고 있는 동안 빨리.</div>
     <div class="msg"><b>키보드(기본)</b> — 혼자: 방향키 이동 · S 패스/몸태클 · D 슛/다리태클 · A 롱패스/선수 바꾸기 · E 질주 · Q 선수 바꾸기. 둘이서 1P: WASD · F · G · R · 왼쪽 Shift · T / 2P: 방향키 · K · L · J · 오른쪽 Shift · I. <b>처음 화면 「⌨ 키보드 설정」에서 모두 바꿀 수 있어요.</b> 게임패드: 왼쪽 스틱 · A 패스 · B 슛 · X 롱패스 · RB/RT 질주 · LB 선수 바꾸기.</div>
     <div class="msg"><b>수비</b> — 공이 없을 때 패스 = <b>몸태클</b>(어깨로 밀어 뺏기, 피지컬이 중요), 슛 = <b>다리태클</b>(바라보는 쪽으로 슬라이딩, 공보다 사람을 먼저 치면 반칙 → 프리킥, 박스 안이면 페널티킥).</div>
-    <div class="msg"><b>커리어</b> — 뉴팀은 낮은 능력의 선수 20명과 운영비 €40M 로 시작해요. 이적시장은 여름(시즌 전)·겨울(9라운드 뒤)·FA(시즌 끝)에 5일씩 열려요. 다른 구단 선수에게 이적료를 제안하거나 내 선수를 얹어 <b>트레이드</b>하고, 내 선수를 이적 명단에 올리면 제안이 와요. 주급은 2주마다, 홈 경기 수입·승리 수당·시즌 상금·스폰서로 운영비가 들어와요.</div>
+    <div class="msg"><b>능력치</b> — 50~120. 스피드·슈팅·패스·드리블·수비·피지컬·헤딩·전술지능·체력·골키퍼 10가지가 경기에 반영돼요(체력이 낮으면 후반에 느려지고, 헤딩은 공중볼·헤딩슛, 전술지능은 자리 잡기·판단). 선수 창의 「✏ 능력치 편집」으로 바꿀 수 있어요.</div>
+    <div class="msg"><b>커리어</b> — 실제 리그 구단을 맡거나, 원하는 리그에서 뉴팀을 창단해요(뉴팀은 그 리그보다 조금 낮은 선수 20명으로 시작). 이적시장은 여름(시즌 전)·겨울(9라운드 뒤)·FA(시즌 끝)에 5일씩 열려요. 다른 구단 선수에게 이적료를 제안하거나 내 선수를 얹어 <b>트레이드</b>하고, 내 선수를 이적 명단에 올리면 제안이 와요. 주급은 2주마다, 홈 경기 수입·승리 수당·시즌 상금·스폰서로 운영비가 들어와요.</div>
     <div class="msg"><b>전술</b> — 포메이션 6가지, 공격 성향·압박·폭·패스 방식이 경기 움직임과 빠른 결과 모두에 반영돼요.</div>
     <button class="big" id="mOk" style="margin-top:12px;width:100%">알겠어요</button>`);
   $("mOk").onclick = closeModal;
@@ -99,17 +143,18 @@ function keySettings(back) {
 
 // ---------------------------------------------------------------- 뉴팀 창단
 const KITS = [["#ffd34a", "#1b2a4a"], ["#e63946", "#ffffff"], ["#1d4ed8", "#ffffff"], ["#16a34a", "#fef08a"], ["#7c3aed", "#f5f5f5"], ["#0f172a", "#ffd34a"], ["#ffffff", "#e63946"], ["#f97316", "#111111"]];
-function createTeam() {
+function createTeam(o) {
   let kit = 0;
+  const lgName = o.world.leagues.find((l) => l.id === o.league).name;
   const draw = () => {
-    app.innerHTML = `<div class="title" style="padding-top:12px"><small>NEW TEAM</small><h1>뉴팀 <b>창단</b></h1><p>이름과 색을 정하면 낮은 능력의 선수 20명과 운영비 <b>€40M</b>로 시작해요. 이적시장에서 키워 마이 팀을 만들어요.</p></div>
+    app.innerHTML = `<div class="title" style="padding-top:12px"><small>NEW TEAM</small><h1>뉴팀 <b>창단</b></h1><p><b>${esc(lgName)}</b>에 한 팀으로 들어가요. 그 리그보다 조금 낮은 선수 20명으로 시작해, 운영비로 키워 마이 팀을 만들어요.</p></div>
       <div class="card"><div class="lbl" style="margin-top:0">팀 이름</div><input type="text" id="iName" maxlength="16" value="뉴팀 FC">
       <div class="lbl">약칭 (영문 3자)</div><input type="text" id="iShort" maxlength="3" value="NEW">
       <div class="lbl">유니폼 색</div><div class="swatches">${KITS.map((k, i) => `<button class="sw ${i === kit ? "on" : ""}" data-k="${i}" style="background:${k[0]}"><i style="background:${k[1]}"></i></button>`).join("")}</div></div>
-      <div class="stack"><button class="big" id="bGo">창단하고 시작</button><button class="sm" id="bBack">처음으로</button></div>`;
-    app.querySelectorAll(".sw").forEach((b) => (b.onclick = () => { const n = $("iName").value, s = $("iShort").value; kit = +b.dataset.k; draw(); $("iName").value = n; $("iShort").value = s; }));
-    $("bGo").onclick = () => { S = C.newCareer({ name: $("iName").value.trim() || "뉴팀 FC", short: $("iShort").value.trim() || "NEW", c1: KITS[kit][0], c2: KITS[kit][1] }); persist(); tab = "home"; hub(); toast("창단 완료! 여름 이적시장에서 선수를 보강해 보세요."); };
-    $("bBack").onclick = title;
+      <div class="stack"><button class="big" id="bGo">창단하고 시작</button><button class="sm" id="bBack">뒤로</button></div>`;
+    app.querySelectorAll(".sw").forEach((b) => (b.onclick = () => { const n = $("iName").value, sh = $("iShort").value; kit = +b.dataset.k; draw(); $("iName").value = n; $("iShort").value = sh; }));
+    $("bGo").onclick = () => { S = C.newCareer({ world: o.world, mode: o.mode, team: { name: $("iName").value.trim() || "뉴팀 FC", short: $("iShort").value.trim() || "NEW", c1: KITS[kit][0], c2: KITS[kit][1], league: o.league } }); persist(); tab = "home"; hub(); toast("창단 완료! 여름 이적시장에서 선수를 보강해 보세요."); };
+    $("bBack").onclick = newCareerFlow;
   };
   draw();
 }
@@ -118,8 +163,8 @@ function createTeam() {
 function hub() {
   app.hidden = false; $("matchView").hidden = true;
   const me = C.club(S, C.MY);
-  const tabs = [["home", "홈"], ["squad", "선수단"], ["tactic", "전술"], ["market", "이적시장"], ["table", "순위"], ["news", "소식·재정"]];
-  app.innerHTML = `<div class="hub-top">${badge(me)}<div class="nm"><b>${esc(me.name)}<span class="tag">MY TEAM</span></b><span class="sub">${C.seasonLabel(S)} 시즌 · 종합 ${C.rating(S, C.MY)} · 평판 ${Math.round(me.rep)}</span></div>
+  const tabs = [["home", "홈"], ["squad", "선수단"], ["tactic", "전술"], ["market", "이적시장"], ["table", "리그"], ["news", "소식·재정"]];
+  app.innerHTML = `<div class="hub-top">${badge(me)}<div class="nm"><b>${esc(me.name)}<span class="tag">MY TEAM</span></b><span class="sub">${esc(C.myLeague(S).name)} · ${C.seasonLabel(S)} · 종합 ${C.rating(S, C.MY)} · 평판 ${Math.round(me.rep)}</span></div>
       <div class="money"><span class="sub">운영비</span><b>${money(me.budget)}</b></div></div>
     <div class="tabs">${tabs.map(([k, n]) => `<button class="${tab === k ? "on" : ""}" data-t="${k}">${n}${k === "market" && S.offers.length ? ` (${S.offers.length})` : ""}</button>`).join("")}</div>
     <div id="tabBody"></div>`;
@@ -133,31 +178,33 @@ function phaseBox() {
 }
 function bindDay() { const b = $("bDay"); if (b) b.onclick = () => { const was = S.phase; C.advanceDay(S); persist(); if (S.phase !== was) toast(`${C.PHASE_KO[was]}이 닫혔어요 → ${C.PHASE_KO[S.phase]}`); hub(); }; }
 function tabHome(el) {
-  const f = C.nextFixture(S);
+  let f = C.nextFixture(S);
   let next = "";
-  if (f) {
+  if (f && f.bye) { next = `<div class="card"><h3>이번 라운드는 쉬어요</h3><button class="big alt" id="bSim" style="width:100%">⏩ 다음 라운드로</button></div>`; }
+  else if (f) {
     const h = C.club(S, f.h), a = C.club(S, f.a);
     next = `<div class="card"><h3>다음 경기 · ${S.md + 1}라운드 ${f.h === C.MY ? "(홈)" : "(원정)"}</h3>
       <div class="vs"><div class="t">${badge(h)}<b>${esc(h.name)}</b><span class="sub">종합 ${C.rating(S, h.id)}</span></div><div class="x">VS</div><div class="t">${badge(a)}<b>${esc(a.name)}</b><span class="sub">종합 ${C.rating(S, a.id)}</span></div></div>
       <div class="row c" style="margin-top:8px"><button class="big" id="bPlay">⚽ 직접 뛰기</button><button class="big alt" id="bSim">⏩ 빠른 결과</button></div></div>`;
   }
   const offers = S.offers.length ? `<div class="card"><h3>📨 받은 제안 ${S.offers.length}건</h3>${offersHTML()}</div>` : "";
-  const tb = C.standings(S), myRank = tb.findIndex((r) => r.c.id === C.MY) + 1;
+  const tb = C.standings(S), myRank = tb.findIndex((r) => r.c.id === C.MY) + 1, myT = C.myLeague(S).table[C.MY];
   el.innerHTML = phaseBox() + next + offers +
-    `<div class="card"><h3>시즌 현황</h3><div class="kv"><span>순위</span><b>${myRank}위 / ${tb.length}</b></div><div class="kv"><span>승점</span><b>${S.table[C.MY].pts}</b></div>
+    `<div class="card"><h3>시즌 현황</h3><div class="kv"><span>순위</span><b>${myRank}위 / ${tb.length}</b></div><div class="kv"><span>승점</span><b>${myT.pts} (${myT.w}승 ${myT.d}무 ${myT.l}패)</b></div>
       <div class="kv"><span>선수단</span><b>${C.squad(S, C.MY).length}명 · 주급 합계 ${money(C.payroll(S, C.MY))}</b></div>
-      ${S.history.length ? `<div class="kv"><span>지난 시즌</span><b>${S.history[0].myRank}위 (우승 ${esc(S.history[0].champion)})</b></div>` : ""}</div>
+      ${S.history.length ? `<div class="kv"><span>지난 시즌</span><b>${esc(S.history[0].league)} ${S.history[0].myRank}위${S.history[0].move === "up" ? " ⬆ 승격" : S.history[0].move === "down" ? " ⬇ 강등" : ""}</b></div>` : ""}</div>
     <div class="card"><h3>최근 소식</h3>${S.news.slice(0, 5).map((n) => `<div class="newsl ${n.kind}">${esc(n.text)}</div>`).join("")}</div>
     <div class="row c" style="margin-top:12px"><button class="sm" id="bHome">처음 화면</button></div>`;
   bindDay(); bindOffers();
-  if (f) { $("bPlay").onclick = () => playCareerMatch(); $("bSim").onclick = () => { const res = C.playMatchday(S); persist(); showResults(res); }; }
+  if (f) { if ($("bPlay")) $("bPlay").onclick = () => playCareerMatch(); $("bSim").onclick = () => { const res = C.playMatchday(S); persist(); showResults(res); }; }
   $("bHome").onclick = title;
 }
-function showResults(res, myLine) {
-  if (!res) return hub();
+function showResults(R, myLine) {
+  if (!R) return hub(); const res = R.results || [], L = C.league(S, R.league) || C.myLeague(S);
   const rows = res.map((r) => { const h = C.club(S, r.h), a = C.club(S, r.a); return `<tr class="${r.mine ? "me" : ""}"><td>${esc(h.name)}</td><td class="n"><b>${r.score[0]} : ${r.score[1]}</b></td><td>${esc(a.name)}</td></tr>`; }).join("");
-  modal(`<h2>${S.md}라운드 결과</h2>${myLine ? `<div class="msg ok">${myLine}</div>` : ""}<table style="margin-top:8px">${rows}</table>
-    ${S.phase === "winter" ? `<div class="msg ct">❄ 겨울 이적시장이 열렸어요!</div>` : S.phase === "fa" ? `<div class="msg ct">🏆 시즌이 끝났어요 — ${esc(S.history[0].champion)} 우승, 우리 팀 ${S.history[0].myRank}위. FA 이적시장이 열렸어요.</div>` : ""}
+  const h0 = S.history[0];
+  modal(`<h2>${esc(L.name)} ${L.played || L.fixtures.length}라운드 결과</h2>${myLine ? `<div class="msg ok">${myLine}</div>` : ""}<table style="margin-top:8px">${rows}</table>
+    ${S.phase === "winter" ? `<div class="msg ct">❄ 겨울 이적시장이 열렸어요!</div>` : S.phase === "fa" && h0 && h0.season !== C.seasonLabel(S) ? `<div class="msg ct">🏆 시즌 끝 — ${esc(h0.champion)} 우승, 우리 팀 ${h0.myRank}위${h0.move === "up" ? " 🎉 승격!" : h0.move === "down" ? " (강등)" : ""}. FA 이적시장이 열렸어요.</div>` : ""}
     <button class="big" id="mOk" style="width:100%;margin-top:12px">확인</button>`);
   $("mOk").onclick = () => { closeModal(); hub(); };
 }
@@ -190,13 +237,30 @@ function tabSquad(el) {
   el.querySelectorAll("tr[data-p]").forEach((tr) => (tr.onclick = () => myPlayerModal(tr.dataset.p)));
 }
 function attrsHTML(p) {
-  const A = p.pos === "GK" ? [["골키퍼", p.gk], ["피지컬", p.phy], ["패스", p.pas], ["속도", p.pac]] : [["속도", p.pac], ["슛", p.sho], ["패스", p.pas], ["드리블", p.dri], ["수비", p.def], ["피지컬", p.phy], ["종합", ovr(p)], ["잠재력", p.pot]];
+  const A = ATTRS.filter(([k]) => p.pos === "GK" || k !== "gk").map(([k, n]) => [n, p[k]]).concat([["종합", ovr(p)], ["잠재력", p.pot]]);
   return `<div class="attrs">${A.map(([n, v]) => `<div><b style="color:${ovCol(v)}">${v}</b>${n}</div>`).join("")}</div>`;
+}
+// 능력치 편집(50~120)
+function editModal(pid, back) {
+  const p = C.player(S, pid), draft = {}; for (const [k] of ATTRS) draft[k] = p[k]; let pos = p.pos;
+  const draw = () => {
+    const tmp = { ...p, ...draft, pos };
+    modal(`<h2>✏ ${esc(p.name)} 능력치 편집 ${ovTag(ovr(tmp))}</h2><p class="sub">${AMIN}~${AMAX}. 종합은 포지션별 가중치로 다시 계산돼요.</p>
+      <div class="lbl">포지션</div><select id="ePos">${POS.map((x) => `<option ${x === pos ? "selected" : ""} value="${x}">${x} ${POS_KO[x]}</option>`).join("")}</select>
+      ${ATTRS.map(([k, n, why]) => `<div class="lbl">${n} <b style="color:${ovCol(draft[k])}" id="v_${k}">${draft[k]}</b> <span class="sub">— ${why}</span></div><input type="range" min="${AMIN}" max="${AMAX}" value="${draft[k]}" data-a="${k}">`).join("")}
+      <div class="row" style="margin-top:12px"><button class="big" id="eOk">저장</button><button class="sm" id="eNo">취소</button></div>`);
+    $("modal").querySelectorAll("[data-a]").forEach((r) => (r.oninput = () => { draft[r.dataset.a] = +r.value; $("v_" + r.dataset.a).textContent = r.value; }));
+    $("modal").querySelectorAll("[data-a]").forEach((r) => (r.onchange = draw));
+    $("ePos").onchange = (e) => { pos = e.target.value; draw(); };
+    $("eOk").onclick = () => { C.editPlayer(S, pid, draft, pos); persist(); closeModal(); toast(`${p.name} 능력치를 바꿨어요 (종합 ${ovr(p)})`); if (back) back(); else hub(); };
+    $("eNo").onclick = closeModal;
+  };
+  draw();
 }
 function playerHead(p) {
   const c = p.club ? C.club(S, p.club) : null;
   return `<div class="row" style="gap:10px">${p.face ? `<img src="assets/faces/${p.face}_face.png" style="width:56px;height:56px;border-radius:50%;object-fit:cover" alt="">` : `<span class="badge" style="width:56px;height:56px;background:#223;border-color:#445">${p.pos}</span>`}
-    <div><h2>${esc(p.name)} ${ovTag(ovr(p))}</h2><span class="sub">${FLAG[p.nat] || "🏳"} ${POS_KO[p.pos]} · ${p.age}세 · ${c ? esc(c.name) : "자유 계약(FA)"}</span></div></div>
+    <div><h2>${esc(p.name)} ${ovTag(ovr(p))}</h2><span class="sub">${flagOf(p.nat)} ${esc(p.nat && p.nat.length > 2 ? p.nat : "")} · ${POS_KO[p.pos]} · ${p.age}세 · ${c ? esc(c.name) : "자유 계약(FA)" + (p.lastClub ? ` (전 소속 ${esc(p.lastClub)})` : "")}</span></div></div>
     ${attrsHTML(p)}
     <div class="kv" style="margin-top:8px"><span>시장 가치</span><b>${money(marketValue(p))}</b></div>
     <div class="kv"><span>주급</span><b>${money(p.wage || wageOf(p))}</b></div><div class="kv"><span>남은 계약</span><b>${p.club ? p.contract + "시즌" : "-"}</b></div>
@@ -204,70 +268,103 @@ function playerHead(p) {
 }
 function myPlayerModal(pid) {
   const p = C.player(S, pid), listed = S.listed.includes(pid);
-  modal(playerHead(p) + `<div class="row" style="margin-top:12px"><button class="sm ${listed ? "on" : ""}" id="mList">${listed ? "이적 명단에서 내리기" : "이적 명단 올리기"}</button><button class="sm green" id="mExt">재계약 (+2시즌)</button><button class="sm red" id="mRel">방출</button><button class="sm" id="mClose">닫기</button></div>
+  modal(playerHead(p) + `<div class="row" style="margin-top:12px"><button class="sm ${listed ? "on" : ""}" id="mList">${listed ? "이적 명단에서 내리기" : "이적 명단 올리기"}</button><button class="sm green" id="mExt">재계약 (+2시즌)</button><button class="sm red" id="mRel">방출</button><button class="sm" id="mEdit">✏ 능력치 편집</button><button class="sm" id="mClose">닫기</button></div>
     <p class="sub" style="margin-top:8px">이적 명단에 올리면 이적시장 기간에 다른 구단의 제안이 와요.</p>`);
   $("mList").onclick = () => { C.toggleList(S, pid); persist(); closeModal(); hub(); toast(S.listed.includes(pid) ? `${p.name}을(를) 이적 명단에 올렸어요` : "명단에서 내렸어요"); };
   $("mExt").onclick = () => { const r = C.extend(S, pid); persist(); closeModal(); hub(); toast(r.msg); };
   $("mRel").onclick = () => { const r = C.release(S, pid); persist(); closeModal(); hub(); if (r) toast(r.msg); };
+  $("mEdit").onclick = () => editModal(pid);
   $("mClose").onclick = closeModal;
 }
 
-// ---------------------------------------------------------------- 전술
-let selSlot = -1;
+// ---------------------------------------------------------------- 전술 빌더
+let selSlot = -1, dragMode = false;
+function myTactic() { return (S.tactics[C.MY] = migrateTactic(S.tactics[C.MY] || DEFAULT_TACTIC)); }
 function tabTactic(el) {
-  const t = S.tactics[C.MY], lu = C.fixLineup(S, C.MY), slots = FORMATIONS[t.formation], sq = C.squad(S, C.MY), me = C.club(S, C.MY);
-  const seg = (k) => `<div class="lbl">${{ mentality: "공격 성향", press: "압박", width: "폭", passing: "패스 방식" }[k]}</div><div class="seg">${TACTIC_LABEL[k].map((n, i) => `<button class="sm ${t[k] === i ? "on" : ""}" data-k="${k}" data-v="${i}">${n}</button>`).join("")}</div>`;
-  el.innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">포메이션 · 종합 ${C.rating(S, C.MY)}</h3><button class="sm on" id="bAuto">자동 배치</button></div>
-      <div class="seg" style="margin-top:8px">${Object.keys(FORMATIONS).map((f) => `<button class="sm ${t.formation === f ? "on" : ""}" data-f="${f}">${f}</button>`).join("")}</div>
+  const t = myTactic(), lu = C.fixLineup(S, C.MY), slots = slotsOf(t), sq = C.squad(S, C.MY), me = C.club(S, C.MY);
+  const custom = !!t.slots;
+  el.innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">포메이션 ${custom ? "커스텀" : t.formation} · 종합 ${C.rating(S, C.MY)}</h3><button class="sm on" id="bAuto">자동 배치</button></div>
+      <div class="seg" style="margin-top:8px">${Object.keys(FORMATIONS).map((f) => `<button class="sm ${!custom && t.formation === f ? "on" : ""}" data-f="${f}">${f}</button>`).join("")}<button class="sm ${custom ? "on" : ""}" id="bCustom">✋ 커스텀</button></div>
+      <div class="row" style="margin-top:8px"><button class="sm ${dragMode ? "on" : ""}" id="bDrag">${dragMode ? "✋ 자리 옮기는 중 — 끝내기" : "✋ 자리 끌어서 옮기기"}</button>${custom ? `<button class="sm red" id="bReset">커스텀 지우기</button>` : ""}</div>
       <div class="board" id="board">${slots.map(([pos, ax, ay], i) => { const p = sq.find((q) => q.id === lu.xi[i]); const fo = p ? fitOvr(p, pos) : 0;
         return `<div class="slot ${selSlot === i ? "sel" : ""}" data-i="${i}" style="left:${ax * 100}%;top:${(1 - ay / 0.78) * 88 + 6}%"><div class="dot" style="background:${me.c1};color:${lum(me.c1) > 0.6 ? "#111" : "#fff"}">${p && p.face ? `<img src="assets/faces/${p.face}_face.png" alt="">` : fo}</div><span class="nm">${p ? esc(p.name) : "비어 있음"}</span><span class="pp">${pos} ${p ? fo : ""}</span></div>`; }).join("")}</div>
-      <p class="sub" style="margin-top:6px">자리를 누르면 그 자리에 설 선수를 고를 수 있어요. 숫자는 그 자리에서의 능력이에요.</p></div>
-    <div class="card"><h3>팀 지시</h3>${seg("mentality")}${seg("press")}${seg("width")}${seg("passing")}</div>
+      <p class="sub" style="margin-top:6px">${dragMode ? "선수 동그라미를 끌어 원하는 자리에 놓으세요. 바꾼 모양은 '커스텀'으로 저장돼요." : "자리를 누르면 그 자리 선수·역할(포지션)을 바꿀 수 있어요. 숫자는 그 자리에서의 능력이에요."}</p></div>
+    <div class="card"><h3>팀 전술 유형</h3><div class="seg">${Object.entries(PRESETS).map(([k, v]) => `<button class="sm ${t.preset === k ? "on" : ""}" data-pr="${k}">${v.name}</button>`).join("")}</div>
+      ${TACTIC_ITEMS.map(([k, n, lo, hi]) => `<div class="lbl">${n} <b style="color:var(--gold)" id="tv_${k}">${t[k]}</b></div><div class="row" style="gap:6px;flex-wrap:nowrap"><span class="sub" style="width:58px">${lo}</span><input type="range" min="0" max="100" value="${t[k]}" data-tk="${k}"><span class="sub" style="width:58px;text-align:right">${hi}</span></div>`).join("")}
+      <p class="sub" style="margin-top:6px">공격 성향·압박·라인·폭·패스 길이·템포가 경기 속 선수 움직임과 빠른 결과 모두에 반영돼요.</p></div>
     <div class="card"><h3>벤치</h3>${lu.bench.map((id) => { const p = C.player(S, id); return p ? `<div class="kv"><span>${posTag(p.pos)} ${esc(p.name)}</span><b>${ovr(p)}</b></div>` : ""; }).join("") || `<p class="sub">벤치가 비어 있어요</p>`}</div>`;
-  el.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { t.formation = b.dataset.f; S.lineups[C.MY] = null; C.fixLineup(S, C.MY); persist(); hub(); }));
-  el.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => { t[b.dataset.k] = +b.dataset.v; persist(); hub(); }));
+  el.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { t.formation = b.dataset.f; t.slots = null; S.lineups[C.MY] = null; C.fixLineup(S, C.MY); persist(); hub(); }));
+  $("bCustom").onclick = () => { if (!t.slots) t.slots = slotsOf(t).map((x) => x.slice()); dragMode = true; persist(); hub(); };
+  $("bDrag").onclick = () => { dragMode = !dragMode; if (dragMode && !t.slots) t.slots = slotsOf(t).map((x) => x.slice()); persist(); hub(); };
+  if ($("bReset")) $("bReset").onclick = () => { t.slots = null; dragMode = false; S.lineups[C.MY] = null; C.fixLineup(S, C.MY); persist(); hub(); };
+  el.querySelectorAll("[data-pr]").forEach((b) => (b.onclick = () => { Object.assign(t, PRESETS[b.dataset.pr].v); t.preset = b.dataset.pr; persist(); hub(); }));
+  el.querySelectorAll("[data-tk]").forEach((r) => { r.oninput = () => { $("tv_" + r.dataset.tk).textContent = r.value; }; r.onchange = () => { t[r.dataset.tk] = +r.value; t.preset = null; persist(); hub(); }; });
   $("bAuto").onclick = () => { S.lineups[C.MY] = null; C.fixLineup(S, C.MY); persist(); hub(); toast("가장 좋은 11명으로 배치했어요"); };
-  el.querySelectorAll(".slot").forEach((d) => (d.onclick = () => pickForSlot(+d.dataset.i)));
+  const board = $("board");
+  el.querySelectorAll(".slot").forEach((d) => {
+    if (!dragMode) { d.onclick = () => pickForSlot(+d.dataset.i); return; }
+    d.style.touchAction = "none";
+    d.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); const i = +d.dataset.i; if (t.slots[i][0] === "GK") return toast("골키퍼 자리는 고정이에요");
+      try { d.setPointerCapture(e.pointerId); } catch (_) {}
+      const move = (ev) => { const r = board.getBoundingClientRect(); const ax = Math.max(0.04, Math.min(0.96, (ev.clientX - r.left) / r.width)); const topPct = (ev.clientY - r.top) / r.height * 100; const ay = Math.max(0.1, Math.min(0.78, (1 - (topPct - 6) / 88) * 0.78)); t.slots[i][1] = +ax.toFixed(3); t.slots[i][2] = +ay.toFixed(3); d.style.left = ax * 100 + "%"; d.style.top = (1 - ay / 0.78) * 88 + 6 + "%"; };
+      const up = () => { d.removeEventListener("pointermove", move); d.removeEventListener("pointerup", up); d.removeEventListener("pointercancel", up); t.preset = t.preset; persist(); };
+      d.addEventListener("pointermove", move); d.addEventListener("pointerup", up); d.addEventListener("pointercancel", up);
+    });
+  });
 }
 function pickForSlot(i) {
-  const t = S.tactics[C.MY], lu = C.fixLineup(S, C.MY), pos = FORMATIONS[t.formation][i][0];
+  const t = myTactic(), lu = C.fixLineup(S, C.MY), slots = slotsOf(t), pos = slots[i][0];
   const sq = C.squad(S, C.MY).slice().sort((a, b) => fitOvr(b, pos) - fitOvr(a, pos));
-  modal(`<h2>${pos} 자리 (${POS_KO[pos]})</h2><table style="margin-top:8px"><tr><th>자리</th><th>이름</th><th class="n">이 자리</th><th class="n">종합</th><th></th></tr>
+  modal(`<h2>${pos} 자리 (${POS_KO[pos]})</h2>
+    ${pos !== "GK" ? `<div class="lbl">이 자리 역할(포지션) 바꾸기</div><div class="seg">${POS.filter((x) => x !== "GK").map((x) => `<button class="sm ${x === pos ? "on" : ""}" data-rp="${x}">${x}</button>`).join("")}</div>` : ""}
+    <table style="margin-top:8px"><tr><th>자리</th><th>이름</th><th class="n">이 자리</th><th class="n">종합</th><th></th></tr>
     ${sq.map((p) => { const where = lu.xi.indexOf(p.id); return `<tr class="click" data-p="${p.id}"><td>${posTag(p.pos)}</td><td><div class="pname">${faceImg(p)}<span>${esc(p.name)}</span></div></td><td class="n">${ovTag(fitOvr(p, pos))}</td><td class="n">${ovr(p)}</td><td class="sub">${where === i ? "지금" : where >= 0 ? "선발" : lu.bench.includes(p.id) ? "벤치" : ""}</td></tr>`; }).join("")}</table>`);
+  $("modal").querySelectorAll("[data-rp]").forEach((b) => (b.onclick = () => { if (!t.slots) t.slots = slotsOf(t).map((x) => x.slice()); t.slots[i][0] = b.dataset.rp; const keep = lu.xi.slice(); S.lineups[C.MY] = { ...lu, xi: keep, key: "custom:" + t.slots.map((x) => x[0]).join(",") }; persist(); closeModal(); hub(); }));
   $("modal").querySelectorAll("tr[data-p]").forEach((tr) => (tr.onclick = () => {
     const id = tr.dataset.p, old = lu.xi[i], j = lu.xi.indexOf(id);
-    if (j >= 0) lu.xi[j] = old; else { lu.bench = lu.bench.filter((x) => x !== id); if (old) lu.bench.unshift(old); lu.bench = lu.bench.slice(0, 7); }
+    if (j >= 0) lu.xi[j] = old; else { lu.bench = lu.bench.filter((x) => x !== id); if (old) lu.bench.unshift(old); lu.bench = lu.bench.slice(0, 9); }
     lu.xi[i] = id; persist(); closeModal(); hub();
   }));
 }
 
 // ---------------------------------------------------------------- 이적시장
-const MK = { view: "clubs", pos: "ALL", sort: "value", max: 0 };
+const MK = { where: "mine", pos: "ALL", sort: "value", max: 0, q: "", minO: 0 };
 function tabMarket(el) {
-  const open = C.windowOpen(S), me = C.club(S, C.MY);
-  let list = S.players.filter((p) => p.club !== C.MY && (MK.view === "fa" ? !p.club : !!p.club));
+  const open = C.windowOpen(S), me = C.club(S, C.MY), myL = C.myLeague(S);
+  const lgOf = new Map(); for (const l of S.leagues) for (const id of l.clubs) lgOf.set(id, l);
+  const whereOpts = [["mine", `우리 리그 (${myL.name})`], ["country", "우리 나라 모든 리그"], ["all", "모든 리그"], ["fa", "자유 계약 FA (트랜스퍼마켓)"], ...S.leagues.map((l) => [l.id, (COUNTRY[l.country] ? COUNTRY[l.country].flag + " " : "") + l.name])];
+  let list = S.players.filter((p) => p.club !== C.MY);
+  const w = MK.where;
+  if (w === "fa") list = list.filter((p) => !p.club);
+  else { list = list.filter((p) => p.club); if (w === "mine") list = list.filter((p) => lgOf.get(p.club) === myL); else if (w === "country") list = list.filter((p) => (lgOf.get(p.club) || {}).country === myL.country); else if (w !== "all") list = list.filter((p) => (lgOf.get(p.club) || {}).id === w); }
   if (MK.pos !== "ALL") list = list.filter((p) => p.pos === MK.pos);
   if (MK.max) list = list.filter((p) => marketValue(p) <= MK.max);
+  if (MK.minO) list = list.filter((p) => ovr(p) >= MK.minO);
+  if (MK.q) { const q = MK.q.toLowerCase(); list = list.filter((p) => p.name.toLowerCase().includes(q)); }
   const so = { value: (a, b) => marketValue(b) - marketValue(a), ovr: (a, b) => ovr(b) - ovr(a), age: (a, b) => a.age - b.age, pot: (a, b) => (b.pot || 0) - (a.pot || 0) };
   list.sort(so[MK.sort]); const shown = list.slice(0, 80);
   el.innerHTML = phaseBox() + (S.offers.length ? `<div class="card"><h3>📨 받은 제안</h3>${offersHTML()}</div>` : "") +
-    `<div class="card">${open ? "" : `<div class="msg ct" style="margin-top:0">이적시장이 닫혀 있어요. 둘러볼 수는 있고, 제안은 ${S.md < 9 ? "겨울 이적시장(9라운드 뒤)" : "시즌 끝 FA·여름 이적시장"}에 할 수 있어요.</div>`}
-      <div class="seg"><button class="sm ${MK.view === "clubs" ? "on" : ""}" data-v="clubs">구단 선수 (이적·트레이드)</button><button class="sm ${MK.view === "fa" ? "on" : ""}" data-v="fa">자유 계약 FA</button></div>
+    `<div class="card">${open ? "" : `<div class="msg ct" style="margin-top:0">이적시장이 닫혀 있어요. 둘러볼 수는 있고, 제안은 겨울(시즌 중간)·FA·여름 이적시장에 할 수 있어요.</div>`}
+      <select id="fWhere" style="width:100%">${whereOpts.map(([k, n]) => `<option value="${k}" ${MK.where === k ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+      <div class="row" style="margin-top:8px"><input type="text" id="fQ" placeholder="선수 이름 찾기" value="${esc(MK.q)}" style="flex:1;min-width:120px;padding:8px 10px;font-size:14px"></div>
       <div class="row" style="margin-top:8px"><select id="fPos"><option value="ALL">모든 자리</option>${POS_ORDER.map((p) => `<option ${MK.pos === p ? "selected" : ""} value="${p}">${p} ${POS_KO[p]}</option>`).join("")}</select>
         <select id="fSort">${[["value", "가치 높은 순"], ["ovr", "종합 높은 순"], ["pot", "잠재력 순"], ["age", "어린 순"]].map(([k, n]) => `<option ${MK.sort === k ? "selected" : ""} value="${k}">${n}</option>`).join("")}</select>
-        <select id="fMax"><option value="0">가격 제한 없음</option>${[2e6, 5e6, 10e6, 20e6, 40e6].map((v) => `<option ${MK.max === v ? "selected" : ""} value="${v}">${money(v)} 이하</option>`).join("")}</select></div>
+        <select id="fMax"><option value="0">가격 제한 없음</option>${[2e5, 5e5, 1e6, 3e6, 10e6, 30e6, 80e6].map((v) => `<option ${MK.max === v ? "selected" : ""} value="${v}">${money(v)} 이하</option>`).join("")}</select>
+        <select id="fMin"><option value="0">종합 제한 없음</option>${[70, 80, 90, 100, 110].map((v) => `<option ${MK.minO === v ? "selected" : ""} value="${v}">종합 ${v} 이상</option>`).join("")}</select></div>
       <table style="margin-top:8px"><tr><th>자리</th><th>이름</th><th class="n">나이</th><th class="n">종합</th><th class="n">가치</th><th>구단</th></tr>
       ${shown.map((p) => playerRow(p, `<td class="sub">${p.club ? esc(C.club(S, p.club).short) : "FA"}</td>`)).join("")}</table>
-      <p class="sub" style="margin-top:6px">${list.length}명 중 ${shown.length}명 · 운영비 ${money(me.budget)}</p></div>`;
+      <p class="sub" style="margin-top:6px">${list.length}명 중 ${shown.length}명 · 운영비 ${money(me.budget)} · 시장가치는 트랜스퍼마켓 값에서 시작해 시즌마다 변해요</p></div>`;
   bindDay(); bindOffers();
-  el.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => { MK.view = b.dataset.v; hub(); }));
-  $("fPos").onchange = (e) => { MK.pos = e.target.value; hub(); }; $("fSort").onchange = (e) => { MK.sort = e.target.value; hub(); }; $("fMax").onchange = (e) => { MK.max = +e.target.value; hub(); };
+  $("fWhere").onchange = (e) => { MK.where = e.target.value; hub(); };
+  $("fQ").onchange = (e) => { MK.q = e.target.value.trim(); hub(); };
+  $("fPos").onchange = (e) => { MK.pos = e.target.value; hub(); }; $("fSort").onchange = (e) => { MK.sort = e.target.value; hub(); }; $("fMax").onchange = (e) => { MK.max = +e.target.value; hub(); }; $("fMin").onchange = (e) => { MK.minO = +e.target.value; hub(); };
   el.querySelectorAll("tr[data-p]").forEach((tr) => (tr.onclick = () => offerModal(tr.dataset.p)));
 }
 function offerModal(pid, preset) {
   const p = C.player(S, pid), me = C.club(S, C.MY), open = C.windowOpen(S);
   if (!p.club) {   // FA
-    const bonus = Math.round(marketValue(p) * 0.12 / 25e3) * 25e3;
+    const bonus = C.signBonus(p);
     modal(playerHead(p) + `<div class="kv"><span>계약금</span><b>${money(bonus)}</b></div><div class="kv"><span>원하는 주급</span><b>${money(C.wageDemand(S, p))}</b></div>
       <div class="row" style="margin-top:12px"><button class="big" id="mSign" ${open ? "" : "disabled"}>✍ 자유 계약 영입</button><button class="sm" id="mClose">닫기</button></div><div id="mMsg"></div>`);
     $("mSign").onclick = () => { const r = C.signFA(S, pid); persist(); $("mMsg").innerHTML = `<div class="msg ${r.ok ? "ok" : "no"}">${esc(r.msg)}</div>`; if (r.ok) setTimeout(() => { closeModal(); hub(); }, 900); };
@@ -298,17 +395,23 @@ function offerModal(pid, preset) {
   render();
 }
 
-// ---------------------------------------------------------------- 순위·소식
+// ---------------------------------------------------------------- 리그·소식
+let viewLeague = null;
 function tabTable(el) {
-  const tb = C.standings(S);
-  const scorers = S.players.filter((p) => p.club && p.sg).sort((a, b) => b.sg - a.sg).slice(0, 8);
-  const md = S.fixtures[Math.min(S.md, S.fixtures.length - 1)];
-  el.innerHTML = phaseBox() + `<div class="card"><h3>${C.seasonLabel(S)} 퓨어 리그</h3><table><tr><th>#</th><th>구단</th><th class="n">경기</th><th class="n">승</th><th class="n">무</th><th class="n">패</th><th class="n">득실</th><th class="n">승점</th></tr>
-    ${tb.map((r, i) => `<tr class="${r.c.id === C.MY ? "me" : ""}"><td>${i + 1}</td><td>${esc(r.c.name)}</td><td class="n">${r.p}</td><td class="n">${r.w}</td><td class="n">${r.d}</td><td class="n">${r.l}</td><td class="n">${r.gf - r.ga}</td><td class="n"><b>${r.pts}</b></td></tr>`).join("")}</table></div>
+  const myL = C.myLeague(S); const L = C.league(S, viewLeague) || myL;
+  const tb = C.standings(S, L), n = tb.length;
+  const prom = L.country && C.COUNTRY[L.country] ? 1 : 0;
+  const scorers = S.players.filter((p) => p.club && L.clubs.includes(p.club) && p.sg).sort((a, b) => b.sg - a.sg).slice(0, 8);
+  const md = L.fixtures[Math.min(L.played, L.fixtures.length - 1)];
+  el.innerHTML = phaseBox() + `<div class="card"><select id="lSel" style="width:100%">${S.leagues.map((l) => `<option value="${l.id}" ${l === L ? "selected" : ""}>${C.COUNTRY[l.country] ? C.COUNTRY[l.country].flag + " " : ""}${esc(l.name)}${l === myL ? " (우리 리그)" : ""}</option>`).join("")}</select>
+    <table style="margin-top:8px"><tr><th>#</th><th>구단</th><th class="n">경기</th><th class="n">승</th><th class="n">무</th><th class="n">패</th><th class="n">득실</th><th class="n">승점</th></tr>
+    ${tb.map((r, i) => `<tr class="${r.c.id === C.MY ? "me" : ""}"><td>${i + 1}</td><td>${esc(r.c.name)}</td><td class="n">${r.p}</td><td class="n">${r.w}</td><td class="n">${r.d}</td><td class="n">${r.l}</td><td class="n">${r.gf - r.ga}</td><td class="n"><b>${r.pts}</b></td></tr>`).join("")}</table>
+    <p class="sub" style="margin-top:6px">${L.played}/${L.fixtures.length}라운드${prom ? " · 시즌이 끝나면 윗리그 아래쪽 팀과 아랫리그 위쪽 팀이 자리를 바꿔요" : ""}</p></div>
     <div class="card"><h3>득점 순위</h3>${scorers.map((p, i) => `<div class="kv"><span>${i + 1}. ${faceImg(p)} ${esc(p.name)} <span class="sub">${esc(C.club(S, p.club).short)}</span></span><b>${p.sg}골</b></div>`).join("") || `<p class="sub">아직 골이 없어요</p>`}</div>
-    ${S.phase === "league" && md ? `<div class="card"><h3>${S.md + 1}라운드 대진</h3>${md.map((f) => `<div class="kv"><span>${esc(C.club(S, f.h).name)} vs ${esc(C.club(S, f.a).name)}</span></div>`).join("")}</div>` : ""}
-    ${S.history.length ? `<div class="card"><h3>지난 시즌</h3>${S.history.map((h) => `<div class="kv"><span>${h.season} 우승 ${esc(h.champion)} · 득점왕 ${esc(h.topScorer)}</span><b>우리 ${h.myRank}위</b></div>`).join("")}</div>` : ""}`;
+    ${S.phase === "league" && md ? `<div class="card"><h3>${L.played + 1}라운드 대진</h3>${md.map((f) => `<div class="kv"><span>${esc(C.club(S, f.h).name)} vs ${esc(C.club(S, f.a).name)}</span></div>`).join("")}</div>` : ""}
+    ${S.history.length ? `<div class="card"><h3>지난 시즌</h3>${S.history.map((h) => `<div class="kv"><span>${h.season} ${esc(h.league)} · 우승 ${esc(h.champion)} · 득점왕 ${esc(h.topScorer)}</span><b>우리 ${h.myRank}위${h.move === "up" ? " ⬆" : h.move === "down" ? " ⬇" : ""}</b></div>`).join("")}</div>` : ""}`;
   bindDay();
+  $("lSel").onchange = (e) => { viewLeague = e.target.value; hub(); };
 }
 function tabNews(el) {
   el.innerHTML = phaseBox() + `<div class="card"><h3>재정</h3><div class="kv"><span>운영비</span><b>${money(C.club(S, C.MY).budget)}</b></div><div class="kv"><span>주급 합계</span><b>${money(C.payroll(S, C.MY))} / 주</b></div>
@@ -321,10 +424,11 @@ function tabNews(el) {
 let G = null;   // 지금 경기 { m, mode:"career"|"friendly"|"host"|"guest", me, ... }
 function teamFromClub(clubObj, players, lineup, tactic) {
   const xi = lineup.xi.map((id) => players.find((p) => p.id === id)).filter(Boolean);
-  return { name: clubObj.name, short: clubObj.short, c1: clubObj.c1, c2: clubObj.c2, formation: tactic.formation, tactic: { ...tactic }, players: xi };
+  const t = migrateTactic(tactic || DEFAULT_TACTIC);
+  return { name: clubObj.name, short: clubObj.short, c1: clubObj.c1, c2: clubObj.c2, formation: t.formation, slots: t.slots || null, tactic: { ...t }, players: xi };
 }
 function playCareerMatch() {
-  const f = C.nextFixture(S); if (!f) return;
+  const f = C.nextFixture(S); if (!f || f.bye) return;
   const oppId = f.h === C.MY ? f.a : f.h;
   for (const id of [C.MY, oppId]) C.fixLineup(S, id);
   const A = teamFromClub(C.club(S, C.MY), C.squad(S, C.MY), S.lineups[C.MY], S.tactics[C.MY]);
@@ -333,21 +437,20 @@ function playCareerMatch() {
   startMatch({ teams: [A, B], human: [true, false], mode: "career", fixture: f });
 }
 function friendly() {
-  const w = S ? { clubs: S.clubs, players: S.players } : makeWorld();
-  let a = 0, b = 1, vs = "cpu";
+  const pick = [null, null]; let vs = "cpu";
+  const pure = makeWorld();
+  const teamOfPure = (c) => { const sq = pure.players.filter((p) => p.club === c.id); return teamFromClub(c, sq, autoLineup(sq, DEFAULT_TACTIC), DEFAULT_TACTIC); };
   const draw = () => {
-    app.innerHTML = `<div class="title" style="padding-top:10px"><small>FRIENDLY</small><h1>친선 경기</h1><p>두 구단을 고르세요. 둘이서는 PC 키보드·게임패드로 — 키는 「⌨ 키보드 설정」의 둘이서 1P/2P 를 따라요.</p></div>
+    app.innerHTML = `<div class="title" style="padding-top:10px"><small>FRIENDLY</small><h1>친선 경기</h1><p>두 팀을 고르세요. 둘이서는 PC 키보드·게임패드(「⌨ 키보드 설정」의 둘이서 1P/2P).</p></div>
       <div class="card"><div class="seg"><button class="sm ${vs === "cpu" ? "on" : ""}" data-vs="cpu">컴퓨터와</button><button class="sm ${vs === "2p" ? "on" : ""}" data-vs="2p">둘이서 (키보드)</button></div>
-      <div class="lbl">내 팀 (아래쪽)</div><select id="sa" style="width:100%">${w.clubs.map((c, i) => `<option value="${i}" ${i === a ? "selected" : ""}>${esc(c.name)}${c.my ? " (MY TEAM)" : ""}</option>`).join("")}</select>
-      <div class="lbl">상대 팀 (위쪽)</div><select id="sb" style="width:100%">${w.clubs.map((c, i) => `<option value="${i}" ${i === b ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
-      <div class="stack"><button class="big" id="bGo">킥오프</button><button class="sm" id="bBack">처음으로</button></div>`;
+      ${[0, 1].map((k) => `<div class="lbl">${k ? "상대 팀 (위쪽)" : "내 팀 (아래쪽)"}</div><div class="row"><b style="flex:1">${pick[k] ? esc(pick[k].name) : "아직 안 골랐어요"}</b>
+        ${S ? `<button class="sm" data-my="${k}">MY TEAM</button>` : ""}<button class="sm" data-real="${k}">실제 리그</button><button class="sm" data-pure="${k}">퓨어 리그</button></div>`).join("")}</div>
+      <div class="stack"><button class="big" id="bGo" ${pick[0] && pick[1] ? "" : "disabled"}>킥오프</button><button class="sm" id="bBack">처음으로</button></div>`;
     app.querySelectorAll("[data-vs]").forEach((x) => (x.onclick = () => { vs = x.dataset.vs; draw(); }));
-    $("sa").onchange = (e) => (a = +e.target.value); $("sb").onchange = (e) => (b = +e.target.value);
-    $("bGo").onclick = () => {
-      if (a === b) return toast("서로 다른 구단을 골라 주세요");
-      const mk = (c) => { const sq = w.players.filter((p) => p.club === c.id); const tac = S && S.tactics[c.id] ? S.tactics[c.id] : DEFAULT_TACTIC; const lu = c.my && S ? C.fixLineup(S, c.id) : autoLineup(sq, tac.formation); return teamFromClub(c, sq, lu, tac); };
-      const A = mk(w.clubs[a]); startMatch({ teams: [A, fixKits(A, mk(w.clubs[b]))], human: [true, vs === "2p"], mode: "friendly", local2p: vs === "2p" });
-    };
+    app.querySelectorAll("[data-my]").forEach((x) => (x.onclick = () => { const c = C.club(S, C.MY); pick[+x.dataset.my] = teamFromClub(c, C.squad(S, C.MY), C.fixLineup(S, C.MY), S.tactics[C.MY]); draw(); }));
+    app.querySelectorAll("[data-real]").forEach((x) => (x.onclick = () => clubPicker("구단 고르기", (cid, W) => { const c = W.clubs.find((q) => q.id === cid); const sq = W.players.filter((p) => p.club === cid); pick[+x.dataset.real] = teamFromClub(c, sq, autoLineup(sq, DEFAULT_TACTIC), DEFAULT_TACTIC); draw(); })));
+    app.querySelectorAll("[data-pure]").forEach((x) => (x.onclick = () => { modal(`<h2>퓨어 리그 구단</h2>${pure.clubs.map((c, i) => `<div class="kv click" data-pc="${i}" style="cursor:pointer"><span>${badge(c, 24)} ${esc(c.name)}</span></div>`).join("")}`); $("modal").querySelectorAll("[data-pc]").forEach((d) => (d.onclick = () => { pick[+x.dataset.pure] = teamOfPure(pure.clubs[+d.dataset.pc]); closeModal(); draw(); })); }));
+    $("bGo").onclick = () => { const A = pick[0]; startMatch({ teams: [A, fixKits(A, pick[1])], human: [true, vs === "2p"], mode: "friendly", local2p: vs === "2p" }); };
     $("bBack").onclick = title;
   };
   draw();
@@ -501,21 +604,19 @@ function fixKits(A, B) {
   const alt = AWAY.find(([c]) => colorDist(c, A.c1) > 200) || AWAY[0];
   return { ...B, c1: alt[0], c2: alt[1], name: A.name === B.name ? B.name + " (원정)" : B.name };
 }
-let onlinePick = "my";
-function myOnlineTeam() {
-  if (S && onlinePick === "my") { const c = C.club(S, C.MY); C.fixLineup(S, C.MY); return teamFromClub(c, C.squad(S, C.MY), S.lineups[C.MY], S.tactics[C.MY]); }
-  const w = makeWorld(); const c = w.clubs.find((x) => x.id === onlinePick) || w.clubs[0]; const sq = w.players.filter((p) => p.club === c.id); return teamFromClub(c, sq, autoLineup(sq, DEFAULT_TACTIC.formation), DEFAULT_TACTIC);
-}
+let onlineTeam = null;
 function online() {
-  if (!S && onlinePick === "my") onlinePick = "light";
-  const t = myOnlineTeam(), w = makeWorld();
+  if (!onlineTeam && S) { const c = C.club(S, C.MY); onlineTeam = teamFromClub(c, C.squad(S, C.MY), C.fixLineup(S, C.MY), S.tactics[C.MY]); }
+  if (!onlineTeam) { const w = makeWorld(), c = w.clubs[0], sq = w.players.filter((p) => p.club === c.id); onlineTeam = teamFromClub(c, sq, autoLineup(sq, DEFAULT_TACTIC), DEFAULT_TACTIC); }
+  const t = onlineTeam;
   app.innerHTML = `<div class="title" style="padding-top:10px"><small>ONLINE</small><h1>친구와 <b>온라인 대전</b></h1><p>한 사람이 방을 만들고 코드를 알려 주면, 다른 사람이 코드로 들어와요. 둘 다 화면을 켜 둔 채로 해 주세요.</p></div>
-    <div class="card"><div class="lbl" style="margin-top:0">내 팀</div><select id="oTeam" style="width:100%">${S ? `<option value="my" ${onlinePick === "my" ? "selected" : ""}>${esc(C.club(S, C.MY).name)} (커리어 MY TEAM · 종합 ${C.rating(S, C.MY)})</option>` : ""}${w.clubs.map((c) => `<option value="${c.id}" ${onlinePick === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="card"><div class="lbl" style="margin-top:0">내 팀</div><div class="row"><b style="flex:1">${esc(t.name)}</b>${S ? `<button class="sm" id="oMy">MY TEAM</button>` : ""}<button class="sm" id="oReal">실제 리그</button></div></div>
     <div class="stack"><button class="big green" id="bHost">방 만들기</button>
       <div class="card"><div class="lbl" style="margin-top:0">방 코드로 참가</div><div class="row"><input type="text" id="iCode" maxlength="6" placeholder="예: K7PQ2" style="flex:1;text-transform:uppercase"><button class="big alt" id="bJoin">참가</button></div></div>
       <button class="sm" id="bBack">처음으로</button></div><div id="onMsg"></div>`;
   $("bBack").onclick = title;
-  $("oTeam").onchange = (e) => { onlinePick = e.target.value; online(); };
+  if ($("oMy")) $("oMy").onclick = () => { const c = C.club(S, C.MY); onlineTeam = teamFromClub(c, C.squad(S, C.MY), C.fixLineup(S, C.MY), S.tactics[C.MY]); online(); };
+  $("oReal").onclick = () => clubPicker("온라인에서 쓸 구단", (cid, W) => { const c = W.clubs.find((q) => q.id === cid), sq = W.players.filter((p) => p.club === cid); onlineTeam = teamFromClub(c, sq, autoLineup(sq, DEFAULT_TACTIC), DEFAULT_TACTIC); online(); });
   $("bHost").onclick = () => hostRoom(t);
   $("bJoin").onclick = () => { const code = $("iCode").value.trim().toUpperCase(); if (code.length < 4) return toast("코드를 넣어 주세요"); joinRoom(code, t); };
 }
@@ -567,7 +668,7 @@ function joinRoom(code, myTeam) {
 // ---------------------------------------------------------------- 시작
 const hp = new URLSearchParams(location.hash.slice(1));
 if (hp.has("demo")) {   // 개발: #demo 컴퓨터끼리 경기 화면 · #demo&human
-  const w = makeWorld(); const mk = (c) => { const sq = w.players.filter((p) => p.club === c.id); return teamFromClub(c, sq, autoLineup(sq, "4-3-3"), DEFAULT_TACTIC); };
+  const w = makeWorld(); const mk = (c) => { const sq = w.players.filter((p) => p.club === c.id); return teamFromClub(c, sq, autoLineup(sq, DEFAULT_TACTIC), DEFAULT_TACTIC); };
   OPT.halfSec = Number(hp.get("half")) || OPT.halfSec;
   startMatch({ teams: [mk(w.clubs[0]), mk(w.clubs[1])], human: [hp.has("human"), false], mode: "friendly" });
 } else title();
