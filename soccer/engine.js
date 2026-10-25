@@ -1,6 +1,6 @@
 // 퓨어데이 FC — 2D 경기 엔진 (위에서 내려다보는 11대11). 단위 m, 경기장 68×105.
 // 팀 0(홈)은 아래(y=105) 골을 지키고 위(y=0)로 공격, 팀 1은 반대. 사람 입력은 팀별 input 객체로 받는다.
-import { FORMATIONS, ovr } from "./data.js";
+import { FORMATIONS, ovr } from "./data.js?v=2";
 
 export const PW = 68, PL = 105, GOAL_W = 7.32, GOAL_H = 2.44;
 const GX0 = PW / 2 - GOAL_W / 2, GX1 = PW / 2 + GOAL_W / 2;
@@ -66,7 +66,7 @@ export class Match {
     const b = this.ball;
     if (b.owner >= 0) this.stats.poss[this.ps[b.owner].t] += dt;
     this.updateCtrl(dt);
-    for (const p of this.ps) { p.stun = Math.max(0, p.stun - dt); p.kickCd = Math.max(0, p.kickCd - dt); }
+    for (const p of this.ps) { p.stun = Math.max(0, p.stun - dt); p.kickCd = Math.max(0, p.kickCd - dt); p.bodyCd = Math.max(0, (p.bodyCd || 0) - dt); p.flash = Math.max(0, (p.flash || 0) - dt); }
     for (let i = 0; i < this.ps.length; i++) this.think(i, dt);
     for (const p of this.ps) this.move(p, dt);
     this.ballPhysics(dt);
@@ -97,7 +97,7 @@ export class Match {
   think(i, dt) {
     const p = this.ps[i], b = this.ball, t = p.t, tac = this.teams[t].tactic;
     p.tx = p.x; p.ty = p.y; p.run = 0.75;
-    if (p.stun > 0) { p.tx = p.x; p.ty = p.y; return; }
+    if (p.slide || p.stun > 0) { p.tx = p.x; p.ty = p.y; return; }
     if (this.ctrl[t] === i) return this.humanControl(i, dt);
     const owner = b.owner >= 0 ? this.ps[b.owner] : null;
     const poss = owner ? owner.t : -1;
@@ -152,6 +152,7 @@ export class Match {
     // 코너킥·프리 상황(restart)이면 바로 처리
     p.think -= dt;
     if (b.restart === "corner" && p.think <= 0) { p.think = 0.6; return this.cross(i); }
+    if (b.restart === "penalty" && p.think <= 0) { p.think = 1; return this.shoot(i, null, 0.95); }
     if (p.think > 0 && (press > 2.2 || !p.plan)) { if (p.plan) { p.tx = p.x + p.plan.dx * 6; p.ty = p.y + p.plan.dy * 6; p.run = 0.86; } else { p.tx = p.x + (p.t === 0 ? 0 : 0); p.ty = p.y + (p.t === 0 ? -2 : 2); p.run = 0.5; } return; }
     p.think = [0.45, 0.32, 0.24][this.diff] + this.rand() * 0.15;
     // 슛
@@ -198,6 +199,7 @@ export class Match {
       return;
     }
     p.hold = 0;
+    if (b.restart === "penalty" && b.owner >= 0 && this.ps[b.owner].t !== t) { p.tx = PW / 2; p.ty = gy + sgn * 0.6; p.run = 0.4; return; }
     // 기본 자리: 골라인 앞, 공 쪽으로 조금
     let tx = PW / 2 + (b.x - PW / 2) * 0.18, ty = gy + sgn * (1.4 + Math.min(4, Math.abs(b.y - gy) / 12));
     tx = clamp(tx, GX0 + 0.5, GX1 - 0.5);
@@ -218,20 +220,22 @@ export class Match {
     if (L > 0.15) { p.tx = p.x + inp.mx / L * 5; p.ty = p.y + inp.my / L * 5; p.run = (inp.sprint ? 1 : 0.8) * Math.min(1, L); p.fx = inp.mx / L; p.fy = inp.my / L; }
     else { p.tx = p.x; p.ty = p.y; p.run = 0.6; }
     if (b.owner === i) {
-      if (inp.passQ) { inp.passQ = false; const q = this.pickPassTarget(i); if (q) this.pass(i, q, inp.passLong); }
+      if (inp.passQ) { inp.passQ = false; const q = this.pickPassTarget(i); if (q) this.pass(i, q, false); }
+      if (inp.longQ) { inp.longQ = false; const q = this.pickPassTarget(i, true); if (q) this.pass(i, q, true); }
       if (inp.shootQ) { inp.shootQ = false; this.shoot(i, L > 0.15 ? inp.mx / L : null, inp.power ?? 0.9); }
     } else {
-      if (inp.passQ) { inp.passQ = false; inp.switchQ = true; }       // 공이 없으면 패스 버튼 = 선수 바꾸기
-      if (inp.shootQ) { inp.shootQ = false; this.tryTackle(i, true); } // 공이 없으면 슛 버튼 = 태클
+      if (inp.passQ) { inp.passQ = false; this.bodyTackle(i); }      // 공이 없으면 패스 = 몸태클
+      if (inp.shootQ) { inp.shootQ = false; this.slideTackle(i); }   // 공이 없으면 슛 = 다리태클(슬라이딩)
+      if (inp.longQ) { inp.longQ = false; inp.switchQ = true; }      // 공이 없으면 롱패스 = 선수 바꾸기
     }
   }
-  pickPassTarget(i) {
+  pickPassTarget(i, far = false) {
     const p = this.ps[i], opp = this.team(1 - p.t); let best = null, bs = -1e9;
     const fl = hyp(p.fx, p.fy) || 1, fx = p.fx / fl, fy = p.fy / fl;
     for (const q of this.team(p.t)) {
       if (q === p) continue; const dx = q.x - p.x, dy = q.y - p.y, d = hyp(dx, dy); if (d < 3) continue;
       const cos = (dx * fx + dy * fy) / d; const open = Math.min(8, ...opp.map((o) => hyp(o.x - q.x, o.y - q.y)));
-      const s = cos * 3 + open * 0.15 - d * 0.03 - (q.pos === "GK" ? 2 : 0);
+      const s = cos * 3 + open * 0.15 - d * (far ? -0.04 : 0.03) - (q.pos === "GK" ? 2 : 0) - (far && d < 15 ? 2 : 0);
       if (s > bs) { bs = s; best = q; }
     }
     return best;
@@ -273,14 +277,23 @@ export class Match {
     const err = ((100 - p.d.sho) / 100 * 0.085 + d * 0.0016) * (this.human[t] ? 0.9 : [1.35, 1, 0.9][this.diff]) * (0.75 + power * 0.4);
     const speed = (19 + p.d.sho * 0.11) * (0.75 + power * 0.3);
     const loft = 1.2 + this.rand() * 2.4;
-    this.kickBall(i, tx, ty, speed, loft, err);
-    b.shot = { team: t, shooter: i, sho: p.d.sho, rolled: false };
+    const wasPenalty = b.restart === "penalty";
+    this.kickBall(i, tx, ty, speed, loft, err * (wasPenalty ? 0.6 : 1)); if (wasPenalty) b.restart = "penalty";
+    b.shot = { team: t, shooter: i, sho: p.d.sho + (wasPenalty ? 25 : 0), rolled: false }; b.restart = null;
     this.stats.shots[t]++;
     this.emit("shot", `${p.d.name} 슛!`, { team: t });
   }
 
   // ------------------------------------------------------------ 움직이기
   move(p, dt) {
+    if (p.slide) {   // 다리태클: 바라보는 쪽으로 미끄러진다
+      const sl = p.slide; sl.t -= dt; const sp = 8.5 * Math.max(0.2, sl.t / 0.5);
+      p.vx = sl.dx * sp; p.vy = sl.dy * sp; p.x = clamp(p.x + p.vx * dt, -2, PW + 2); p.y = clamp(p.y + p.vy * dt, -3, PL + 3);
+      this.slideContact(p);
+      if (sl.t <= 0) { p.slide = null; p.stun = Math.max(p.stun, 0.65); p.down = 0.65; p.vx = p.vy = 0; }
+      return;
+    }
+    if (p.down > 0) { p.down -= dt; p.vx *= 0.8; p.vy *= 0.8; return; }
     const ms = this.maxSpeed(p) * (p.run || 0.75) * (p.stun > 0 ? 0 : 1) * (this.ball.owner === this.ps.indexOf(p) ? 0.9 : 1);
     let dx = p.tx - p.x, dy = p.ty - p.y; const d = hyp(dx, dy);
     let wvx = 0, wvy = 0; if (d > 0.15) { const s = Math.min(ms, d * 3); wvx = dx / d * s; wvy = dy / d * s; }
@@ -340,8 +353,12 @@ export class Match {
     const o = this.ps[b.owner];
     for (let i = 0; i < this.ps.length; i++) {
       const p = this.ps[i]; if (p.t === o.t || p.stun > 0 || p.pos === "GK") continue;
-      const d = hyp(p.x - o.x, p.y - o.y); if (d > 1.5) { p.tackleT = 0; continue; }
-      if (this.ctrl[p.t] === i) continue;     // 사람은 태클 버튼으로
+      if (this.ctrl[p.t] === i || p.slide || p.down > 0) continue;     // 사람은 태클 키로
+      const d = hyp(p.x - o.x, p.y - o.y);
+      if (d > 1.7 && d < 3.2 && !b.restart && this.rand() < dt * [0.25, 0.4, 0.55][this.diff]) {   // 뒤쫓다 다리태클
+        const a = Math.atan2(o.y + o.vy * 0.3 - p.y, o.x + o.vx * 0.3 - p.x); p.fx = Math.cos(a); p.fy = Math.sin(a); this.slideTackle(i); continue;
+      }
+      if (d > 1.5) { p.tackleT = 0; continue; }
       p.tackleT += dt; if (p.tackleT < [0.6, 0.48, 0.4][this.human[p.t] ? 1 : this.diff]) continue;
       p.tackleT = 0; this.tryTackle(i, false);
       if (b.owner < 0 || this.ps[b.owner].t !== o.t) return;
@@ -359,6 +376,57 @@ export class Match {
       b.vx = Math.cos(a) * 5 + p.vx * 0.5; b.vy = Math.sin(a) * 5 + p.vy * 0.5; b.kicker = i; o.stun = 0.6; o.kickCd = 0.5;
       this.emit("tackle", `${p.d.name} 태클 성공`, { team: p.t });
     } else if (human) { p.stun = 0.45; }
+  }
+
+  // 몸태클: 어깨로 밀어 공 뺏기 — 피지컬 차이가 중요, 실패하면 잠깐 휘청
+  bodyTackle(i) {
+    const p = this.ps[i], b = this.ball; if (p.bodyCd > 0 || p.slide || p.down > 0) return;
+    p.bodyCd = 0.45; p.flash = 0.25;
+    const o = b.owner >= 0 ? this.ps[b.owner] : null;
+    if (!o || o.t === p.t || hyp(p.x - o.x, p.y - o.y) > 2.1) { p.vx += p.fx * 3.5; p.vy += p.fy * 3.5; this.emit("body", "", { team: p.t }); return; }
+    const pr = clamp(0.32 + (p.d.phy - o.d.phy) / 140 + (p.d.def - o.d.dri) / 320 + (b.restart ? -0.3 : 0), 0.08, 0.8);
+    if (this.rand() < pr) {
+      if (this.rand() < 0.55) { b.owner = i; b.last = p.t; b.kicker = -1; p.think = 0.25; }
+      else { b.owner = -1; b.last = p.t; const a = Math.atan2(p.fy, p.fx); b.vx = Math.cos(a) * 4 + p.vx * 0.4; b.vy = Math.sin(a) * 4 + p.vy * 0.4; b.kicker = i; }
+      o.stun = 0.55; o.kickCd = 0.45; o.vx -= p.fx * 2; o.vy -= p.fy * 2;
+      this.emit("tackle", `${p.d.name} 몸싸움 승리`, { team: p.t });
+    } else { p.stun = 0.3; p.vx *= 0.3; p.vy *= 0.3; }
+  }
+  // 다리태클(슬라이딩): 3~4m 미끄러지며 공을 걷어 낸다. 공 대신 사람을 치면 반칙
+  slideTackle(i) {
+    const p = this.ps[i]; if (p.slide || p.down > 0 || p.stun > 0) return;
+    const L = hyp(p.fx, p.fy) || 1;
+    p.slide = { t: 0.5, dx: p.fx / L, dy: p.fy / L, done: false }; p.tackleT = 0;
+    this.emit("slide", "", { team: p.t });
+  }
+  slideContact(p) {
+    const sl = p.slide, b = this.ball; if (sl.done) return;
+    const o = b.owner >= 0 ? this.ps[b.owner] : null;
+    const db = hyp(p.x + sl.dx * 0.6 - b.x, p.y + sl.dy * 0.6 - b.y);
+    if (o && o.t !== p.t) {
+      const dp = hyp(p.x - o.x, p.y - o.y);
+      if (db < 1.25) {   // 공에 먼저 닿음
+        sl.done = true;
+        const pr = clamp(0.5 + (p.d.def - o.d.dri) / 140 + (this.ctrl[o.t] === b.owner && this.ctrl[p.t] !== this.ps.indexOf(p) ? -0.12 : 0), 0.15, 0.88);
+        if (this.rand() < pr) {
+          b.owner = -1; b.last = p.t; b.kicker = this.ps.indexOf(p); b.vx = sl.dx * 9 + (this.rand() - 0.5) * 3; b.vy = sl.dy * 9 + (this.rand() - 0.5) * 3; b.z = 0;
+          o.stun = 0.8; o.down = 0.8; o.kickCd = 0.6;
+          this.emit("tackle", `${p.d.name} 슬라이딩 태클!`, { team: p.t });
+        } else if (dp < 1.3 && this.rand() < 0.45) this.foul(p, o);
+        return;
+      }
+      if (dp < 1.0) { sl.done = true; if (this.rand() < 0.7) this.foul(p, o); }   // 사람을 침
+    } else if (b.owner < 0 && db < 1.2 && b.z < 1) {   // 굴러다니는 공 걷어 내기
+      sl.done = true; b.last = p.t; b.kicker = this.ps.indexOf(p); b.shot = null; b.vx = sl.dx * 10; b.vy = sl.dy * 10;
+    }
+  }
+  foul(p, o) {
+    const b = this.ball, t = o.t, gyDef = this.ownGoalY(p.t);
+    o.stun = 1; o.down = 1; p.fouls = (p.fouls || 0) + 1;
+    const inBox = Math.abs(o.y - gyDef) < 16.5 && o.x > PW / 2 - 20.16 && o.x < PW / 2 + 20.16;
+    this.emit("foul", `반칙! ${p.d.name}${p.fouls >= 2 ? " (경고)" : ""}`, { team: p.t });
+    if (inBox) this.restart("penalty", t, PW / 2, gyDef + (p.t === 0 ? -11 : 11));
+    else this.restart("free", t, clamp(o.x, 1, PW - 1), clamp(o.y, 1, PL - 1));
   }
 
   // ------------------------------------------------------------ 라인 밖·골
@@ -380,11 +448,19 @@ export class Match {
     else { let bd = 1e9; for (const q of this.team(team)) { if (q.pos === "GK") continue; const d = hyp(q.x - x, q.y - y); if (d < bd) { bd = d; p = q; } } }
     p.x = x; p.y = y; p.vx = p.vy = 0; p.fx = (PW / 2 - x) / (Math.abs(PW / 2 - x) || 1) * 0.3; p.fy = team === 0 ? -1 : 1;
     if (kind === "throw") { p.fx = x < 1 ? 1 : -1; p.fy = team === 0 ? -0.5 : 0.5; }
-    Object.assign(b, { x, y, z: 0, vx: 0, vy: 0, vz: 0, owner: this.ps.indexOf(p), last: team, shot: null, restart: kind === "corner" ? "corner" : kind });
+    if (kind === "penalty") {   // 차는 선수는 팀에서 슛이 가장 좋은 선수, 나머지는 박스 밖으로
+      p = this.team(team).filter((q) => q.pos !== "GK").sort((a, c) => c.d.sho - a.d.sho)[0];
+      p.x = x; p.y = y; p.fx = 0; p.fy = team === 0 ? -1 : 1;
+      const gk = this.gk(1 - team); gk.x = PW / 2; gk.y = this.goalY(team) + (team === 0 ? 0.6 : -0.6);
+      for (const q of this.ps) if (q !== p && q !== gk && Math.abs(q.y - this.goalY(team)) < 18) q.y = this.goalY(team) + (team === 0 ? 19 : -19);
+    }
+    Object.assign(b, { x: kind === "penalty" ? p.x + p.fx * 0.7 : x, y: kind === "penalty" ? p.y + p.fy * 0.7 : y, z: 0, vx: 0, vy: 0, vz: 0, owner: this.ps.indexOf(p), last: team, shot: null, restart: kind });
     p.think = 0.5; p.hold = 0; this.phase = "restart"; this.timer = 0.9;
     // 상대는 공에서 조금 떨어지게
-    for (const q of this.ps) if (q.t !== team && hyp(q.x - x, q.y - y) < 6) { const a = Math.atan2(q.y - y, q.x - x); q.x = x + Math.cos(a) * 6; q.y = y + Math.sin(a) * 6; }
-    this.emit(kind, { corner: "코너킥", goalkick: "골킥", throw: "스로인" }[kind], { team });
+    const keep = kind === "free" || kind === "penalty" ? 9 : 6;
+    for (const q of this.ps) if (q.t !== team && q !== this.gk(1 - team) && hyp(q.x - x, q.y - y) < keep) { const a = Math.atan2(q.y - y, q.x - x) || 0.5; q.x = clamp(x + Math.cos(a) * keep, 0, PW); q.y = clamp(y + Math.sin(a) * keep, 0, PL); }
+    if (kind === "penalty" || kind === "free") this.timer = 1.4;
+    this.emit(kind, { corner: "코너킥", goalkick: "골킥", throw: "스로인", free: "프리킥", penalty: "페널티킥!" }[kind], { team });
   }
   goal(team) {
     this.score[team]++; const b = this.ball; const k = b.kicker >= 0 ? this.ps[b.kicker] : null;
@@ -411,9 +487,9 @@ export class Match {
     for (const p of this.ps) if (p.sx != null) { p.x += (p.sx - p.x) * f; p.y += (p.sy - p.y) * f; }
   }
 }
-const PHASES = ["kickoff", "play", "goal", "half", "restart", "end"];
+const PHASES = ["kickoff", "play", "goal", "half", "restart", "end"];   // 손님 화면: 슬라이딩·넘어짐도 보내면 좋지만 지금은 위치·방향만
 const r1 = (v) => Math.round(v * 10) / 10;
-function mkInput() { return { mx: 0, my: 0, moving: false, sprint: false, passQ: false, shootQ: false, switchQ: false, passLong: false, power: 0.9 }; }
+function mkInput() { return { mx: 0, my: 0, moving: false, sprint: false, passQ: false, shootQ: false, longQ: false, switchQ: false, power: 0.9 }; }
 function gauss(r) { return (r() + r() + r() - 1.5) * 1.63; }
 function segDist(ax, ay, bx, by, px, py) { const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy || 1; let t = ((px - ax) * dx + (py - ay) * dy) / L; if (t < 0.05 || t > 1) return 99; return hyp(ax + dx * t - px, ay + dy * t - py); }
 
@@ -443,13 +519,24 @@ export function drawMatch(ctx, m, view) {
     ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = Math.max(1.5, s * 0.12);
   }
   // 그림자 + 선수
-  const R = Math.max(5, s * 0.95);
+  const R = Math.max(9, s * (view.big ?? 1.45));
   const order = m.ps.map((p, i) => i).sort((a, c) => (flip ? -1 : 1) * (m.ps[a].y - m.ps[c].y));
   for (const i of order) {
     const p = m.ps[i], [X, Y] = T(p.x, p.y), tm = m.teams[p.t];
     if (X < -20 || Y < -20 || X > w + 20 || Y > h + 20) continue;
     ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(X + 2, Y + R * 0.7, R * 0.9, R * 0.4, 0, 0, 7); ctx.fill();
     const isGK = p.pos === "GK";
+    if (p.slide || p.down > 0) {   // 슬라이딩·넘어짐: 길쭉하게 눕힌 모양
+      const [dx, dy] = p.slide ? (flip ? [-p.slide.dx, -p.slide.dy] : [p.slide.dx, p.slide.dy]) : (flip ? [-p.fx, -p.fy] : [p.fx, p.fy]);
+      ctx.save(); ctx.translate(X, Y); ctx.rotate(Math.atan2(dy, dx));
+      ctx.fillStyle = isGK ? (p.t === 0 ? "#f2d13a" : "#3ad17a") : tm.c1; ctx.strokeStyle = isGK ? "#222" : tm.c2; ctx.lineWidth = Math.max(2, R * 0.25);
+      ctx.beginPath(); ctx.ellipse(0, 0, R * 1.5, R * 0.7, 0, 0, 7); ctx.fill(); ctx.stroke();
+      if (p.slide) { ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-R * 2.4, -R * 0.4); ctx.lineTo(-R * 1.6, -R * 0.4); ctx.moveTo(-R * 2.6, R * 0.3); ctx.lineTo(-R * 1.7, R * 0.3); ctx.stroke(); }
+      ctx.restore();
+      ctx.fillStyle = luminance(isGK ? "#f2d13a" : tm.c1) > 0.6 ? "#111" : "#fff"; ctx.font = `800 ${Math.round(R * 0.9)}px Pretendard, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(p.num, X, Y + 0.5);
+      continue;
+    }
+    if (p.flash > 0) { ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(X + (flip ? -p.fx : p.fx) * R * 0.8, Y + (flip ? -p.fy : p.fy) * R * 0.8, R * 1.15, 0, 7); ctx.stroke(); }
     ctx.fillStyle = isGK ? (p.t === 0 ? "#f2d13a" : "#3ad17a") : tm.c1; ctx.strokeStyle = isGK ? "#222" : tm.c2; ctx.lineWidth = Math.max(2, R * 0.28);
     ctx.beginPath(); ctx.arc(X, Y, R, 0, 7); ctx.fill(); ctx.stroke();
     const face = p.d.face && view.faces && view.faces[p.d.face];

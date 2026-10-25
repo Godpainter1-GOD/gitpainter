@@ -113,7 +113,8 @@ tr.click{cursor:pointer} tr.click:active td{background:rgba(255,255,255,.08)}
 .btns{display:grid;grid-template-columns:repeat(2,64px);grid-template-rows:repeat(2,56px);gap:8px}
 .b{border:0;border-radius:50%;font-weight:900;font-size:15px;color:#0c1622;cursor:pointer;touch-action:none;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
 .b small{font-size:9px;font-weight:800;opacity:.75}
-.b.pass{background:#8ff08a;grid-column:2;grid-row:2}.b.shoot{background:#ffb35a;grid-column:1;grid-row:2}.b.sprint{background:#8ab4ff;grid-column:2;grid-row:1;border-radius:14px}
+.b.pass{background:#8ff08a;grid-column:2;grid-row:2}.b.shoot{background:#ffb35a;grid-column:1;grid-row:2}.b.sprint{background:#8ab4ff;grid-column:2;grid-row:1;border-radius:14px}.b.long{background:#e0c3ff;grid-column:1;grid-row:1;border-radius:14px;font-size:13px}
+.b.def.pass{background:#ffd34a}.b.def.shoot{background:#ff7a6a;font-size:13px}
 .b.down{filter:brightness(1.3);transform:scale(.95)}
 .toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.82);padding:9px 14px;border-radius:12px;font-size:13px;max-width:92%;text-align:center;z-index:40;pointer-events:none}
 .code{font-size:40px;font-weight:900;letter-spacing:8px;color:var(--gold);text-align:center;margin:8px 0}

@@ -1,6 +1,6 @@
 // 퓨어데이 FC — 커리어(구단 운영): 뉴팀 창단 → 마이 팀, 운영비, 여름·겨울·FA 이적시장, 트레이드, 리그 18라운드
-import { makeWorld, makeStarterSquad, ovr, marketValue, wageOf, money, autoLineup, teamRating, FORMATIONS, DEFAULT_TACTIC, POS, rng } from "./data.js";
-import { quickSim } from "./engine.js";
+import { makeWorld, makeStarterSquad, ovr, marketValue, wageOf, money, autoLineup, teamRating, FORMATIONS, DEFAULT_TACTIC, POS, rng } from "./data.js?v=2";
+import { quickSim } from "./engine.js?v=2";
 
 export const MY = "my";
 export const WINDOW_DAYS = 5;

@@ -1,15 +1,25 @@
 // 퓨어데이 FC — 화면(처음·창단·구단 운영·전술·이적시장·경기·온라인)
-import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, FLAG, POS_KO, FORMATIONS, TACTIC_LABEL, DEFAULT_TACTIC, autoLineup, teamRating } from "./data.js";
-import { Match, drawMatch, PW, PL } from "./engine.js";
-import * as C from "./career.js";
-import { connect, makeCode } from "./net.js";
+import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, FLAG, POS_KO, FORMATIONS, TACTIC_LABEL, DEFAULT_TACTIC, autoLineup, teamRating } from "./data.js?v=2";
+import { Match, drawMatch, PW, PL } from "./engine.js?v=2";
+import * as C from "./career.js?v=2";
+import { connect, makeCode } from "./net.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const app = $("app");
-const OPT = { diff: 1, halfSec: 150, sound: true };
+const OPT = { diff: 1, halfSec: 150, sound: true, keys: null };
+// 키 설정: 동작 → KeyboardEvent.code. 혼자(solo) · 둘이서 1P(duo1) · 둘이서 2P(duo2)
+const KEY_ACTIONS = [["up", "위"], ["down", "아래"], ["left", "왼쪽"], ["right", "오른쪽"], ["pass", "패스 · (수비) 몸태클"], ["shoot", "슛 · (수비) 다리태클"], ["long", "롱패스 · (수비) 선수 바꾸기"], ["sprint", "질주 (누르고 있기)"], ["switch", "선수 바꾸기"]];
+const KEY_DEFAULT = {
+  solo: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", pass: "KeyS", shoot: "KeyD", long: "KeyA", sprint: "KeyE", switch: "KeyQ" },
+  duo1: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", pass: "KeyF", shoot: "KeyG", long: "KeyR", sprint: "ShiftLeft", switch: "KeyT" },
+  duo2: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", pass: "KeyK", shoot: "KeyL", long: "KeyJ", sprint: "ShiftRight", switch: "KeyI" },
+};
+const keyName = (c) => (!c ? "없음" : c.startsWith("Key") ? c.slice(3) : c.startsWith("Digit") ? c.slice(5) : ({ ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→", Space: "Space", ShiftLeft: "왼쪽 Shift", ShiftRight: "오른쪽 Shift", ControlLeft: "왼쪽 Ctrl", ControlRight: "오른쪽 Ctrl", AltLeft: "왼쪽 Alt", AltRight: "오른쪽 Alt", Enter: "Enter", Comma: ",", Period: ".", Slash: "/", Semicolon: ";", Quote: "'", BracketLeft: "[", BracketRight: "]", Backslash: "\\", Minus: "-", Equal: "=", Backquote: "`", Tab: "Tab" }[c] || c.replace("Numpad", "숫자패드 ")));
 try { Object.assign(OPT, JSON.parse(localStorage.getItem("pureday-fc-opt") || "{}")); } catch (e) {}
 const saveOpt = () => { try { localStorage.setItem("pureday-fc-opt", JSON.stringify(OPT)); } catch (e) {} };
+if (!OPT.keys) OPT.keys = JSON.parse(JSON.stringify(KEY_DEFAULT));
+for (const k of Object.keys(KEY_DEFAULT)) OPT.keys[k] = { ...KEY_DEFAULT[k], ...(OPT.keys[k] || {}) };
 let S = C.load();            // 커리어 상태
 let tab = "home";
 const FACES = {};
@@ -39,11 +49,11 @@ function title() {
       <button class="big alt" id="bFriendly">⚽ 친선 경기 (컴퓨터 / 둘이서)</button>
       <div class="card"><div class="lbl" style="margin-top:0">컴퓨터 실력</div><div class="seg" id="sDiff">${["쉬움", "보통", "어려움"].map((n, i) => `<button class="sm ${OPT.diff === i ? "on" : ""}" data-v="${i}">${n}</button>`).join("")}</div>
         <div class="lbl">경기 시간</div><div class="seg" id="sTime">${[[90, "3분"], [150, "5분"], [240, "8분"]].map(([v, n]) => `<button class="sm ${OPT.halfSec === v ? "on" : ""}" data-v="${v}">${n}</button>`).join("")}</div></div>
-      <button class="sm" id="bHow">하는 방법</button>
+      <div class="row c"><button class="sm" id="bKeys">⌨ 키보드 설정</button><button class="sm" id="bHow">하는 방법</button></div>
     </div>`;
   if (S) $("bCont").onclick = hub;
   $("bNew").onclick = () => (S ? confirmNew() : createTeam());
-  $("bFriendly").onclick = friendly; $("bOnline").onclick = online; $("bHow").onclick = how;
+  $("bFriendly").onclick = friendly; $("bOnline").onclick = online; $("bHow").onclick = how; $("bKeys").onclick = () => keySettings();
   $("sDiff").querySelectorAll("button").forEach((b) => (b.onclick = () => { OPT.diff = +b.dataset.v; saveOpt(); title(); }));
   $("sTime").querySelectorAll("button").forEach((b) => (b.onclick = () => { OPT.halfSec = +b.dataset.v; saveOpt(); title(); }));
 }
@@ -54,11 +64,37 @@ function confirmNew() {
 function how() {
   modal(`<h2>하는 방법</h2>
     <div class="msg"><b>경기 조작(폰)</b> — 아래 왼쪽 칸을 누르고 끌면 노란 고리 선수가 움직여요. <b>패스</b>: 바라보는 쪽 동료에게(공이 없으면 선수 바꾸기), <b>슛</b>: 상대 골로(공이 없으면 태클), <b>질주</b>: 누르고 있는 동안 빨리.</div>
-    <div class="msg"><b>키보드</b> — 1P: 방향키/WASD 이동 · J/Space 패스 · K/X 슛 · L/Shift 질주. 둘이서일 때 2P: 방향키 · M 패스 · , 슛 · . 질주 (1P 는 WASD · F 패스 · G 슛 · H 질주)</div>
+    <div class="msg"><b>키보드(기본)</b> — 혼자: 방향키 이동 · S 패스/몸태클 · D 슛/다리태클 · A 롱패스/선수 바꾸기 · E 질주 · Q 선수 바꾸기. 둘이서 1P: WASD · F · G · R · 왼쪽 Shift · T / 2P: 방향키 · K · L · J · 오른쪽 Shift · I. <b>처음 화면 「⌨ 키보드 설정」에서 모두 바꿀 수 있어요.</b> 게임패드: 왼쪽 스틱 · A 패스 · B 슛 · X 롱패스 · RB/RT 질주 · LB 선수 바꾸기.</div>
+    <div class="msg"><b>수비</b> — 공이 없을 때 패스 = <b>몸태클</b>(어깨로 밀어 뺏기, 피지컬이 중요), 슛 = <b>다리태클</b>(바라보는 쪽으로 슬라이딩, 공보다 사람을 먼저 치면 반칙 → 프리킥, 박스 안이면 페널티킥).</div>
     <div class="msg"><b>커리어</b> — 뉴팀은 낮은 능력의 선수 20명과 운영비 €40M 로 시작해요. 이적시장은 여름(시즌 전)·겨울(9라운드 뒤)·FA(시즌 끝)에 5일씩 열려요. 다른 구단 선수에게 이적료를 제안하거나 내 선수를 얹어 <b>트레이드</b>하고, 내 선수를 이적 명단에 올리면 제안이 와요. 주급은 2주마다, 홈 경기 수입·승리 수당·시즌 상금·스폰서로 운영비가 들어와요.</div>
     <div class="msg"><b>전술</b> — 포메이션 6가지, 공격 성향·압박·폭·패스 방식이 경기 움직임과 빠른 결과 모두에 반영돼요.</div>
     <button class="big" id="mOk" style="margin-top:12px;width:100%">알겠어요</button>`);
   $("mOk").onclick = closeModal;
+}
+
+// ---------------------------------------------------------------- 키보드 설정
+function keySettings(back) {
+  let prof = "solo", wait = null;
+  const draw = () => {
+    const K = OPT.keys[prof];
+    modal(`<h2>⌨ 키보드 설정</h2><p class="sub" style="margin-top:4px">바꿀 동작을 누르고 원하는 키를 누르세요. Esc = 취소. 같은 키가 이미 쓰이면 서로 바뀌어요.</p>
+      <div class="seg" style="margin-top:10px">${[["solo", "혼자 할 때"], ["duo1", "둘이서 1P"], ["duo2", "둘이서 2P"]].map(([k, n]) => `<button class="sm ${prof === k ? "on" : ""}" data-pf="${k}">${n}</button>`).join("")}</div>
+      <div style="margin-top:8px">${KEY_ACTIONS.map(([a, n]) => `<div class="kv" style="align-items:center"><span>${n}</span><button class="sm ${wait === a ? "on" : ""}" data-ka="${a}" style="min-width:110px">${wait === a ? "키를 누르세요…" : keyName(K[a])}</button></div>`).join("")}</div>
+      <div class="row" style="margin-top:12px"><button class="sm red" id="kReset">이 설정 기본값으로</button><button class="big" id="kOk" style="flex:1">저장하고 닫기</button></div>`);
+    $("modal").querySelectorAll("[data-pf]").forEach((b) => (b.onclick = () => { prof = b.dataset.pf; wait = null; draw(); }));
+    $("modal").querySelectorAll("[data-ka]").forEach((b) => (b.onclick = () => { wait = b.dataset.ka; draw(); }));
+    $("kReset").onclick = () => { OPT.keys[prof] = { ...KEY_DEFAULT[prof] }; saveOpt(); draw(); };
+    $("kOk").onclick = () => { saveOpt(); removeEventListener("keydown", grab, true); closeModal(); if (back) back(); };
+  };
+  const grab = (e) => {
+    if (!wait || $("modal").hidden) return; e.preventDefault(); e.stopPropagation();
+    if (e.code === "Escape") { wait = null; return draw(); }
+    const K = OPT.keys[prof], other = Object.keys(K).find((a) => a !== wait && K[a] === e.code);
+    if (other) K[other] = K[wait];   // 겹치면 서로 바꿈
+    K[wait] = e.code; wait = null; saveOpt(); draw();
+  };
+  addEventListener("keydown", grab, true);
+  draw();
 }
 
 // ---------------------------------------------------------------- 뉴팀 창단
@@ -300,7 +336,7 @@ function friendly() {
   const w = S ? { clubs: S.clubs, players: S.players } : makeWorld();
   let a = 0, b = 1, vs = "cpu";
   const draw = () => {
-    app.innerHTML = `<div class="title" style="padding-top:10px"><small>FRIENDLY</small><h1>친선 경기</h1><p>두 구단을 고르세요. 둘이서는 PC 키보드로(1P WASD·F·G·H, 2P 방향키·M·,·.)</p></div>
+    app.innerHTML = `<div class="title" style="padding-top:10px"><small>FRIENDLY</small><h1>친선 경기</h1><p>두 구단을 고르세요. 둘이서는 PC 키보드·게임패드로 — 키는 「⌨ 키보드 설정」의 둘이서 1P/2P 를 따라요.</p></div>
       <div class="card"><div class="seg"><button class="sm ${vs === "cpu" ? "on" : ""}" data-vs="cpu">컴퓨터와</button><button class="sm ${vs === "2p" ? "on" : ""}" data-vs="2p">둘이서 (키보드)</button></div>
       <div class="lbl">내 팀 (아래쪽)</div><select id="sa" style="width:100%">${w.clubs.map((c, i) => `<option value="${i}" ${i === a ? "selected" : ""}>${esc(c.name)}${c.my ? " (MY TEAM)" : ""}</option>`).join("")}</select>
       <div class="lbl">상대 팀 (위쪽)</div><select id="sb" style="width:100%">${w.clubs.map((c, i) => `<option value="${i}" ${i === b ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
@@ -325,7 +361,7 @@ function startMatch(o) {
   $("tA").textContent = m.teams[0].short || m.teams[0].name; $("tB").textContent = m.teams[1].short || m.teams[1].name;
   $("tA").style.background = m.teams[0].c1; $("tA").style.color = lum(m.teams[0].c1) > 0.6 ? "#111" : "#fff";
   $("tB").style.background = m.teams[1].c1; $("tB").style.color = lum(m.teams[1].c1) > 0.6 ? "#111" : "#fff";
-  $("ctrl").style.display = G.local2p ? "none" : "";
+  $("ctrl").style.display = G.local2p ? "none" : ""; btnMode = "";
   banner("킥오프!", `${m.teams[0].name} vs ${m.teams[1].name}`);
   requestAnimationFrame(loop);
 }
@@ -352,13 +388,14 @@ function loop(now) {
     if (m.phase === "end" && !G.ended) { G.ended = true; setTimeout(endMatch, 900); }
   }
   const { w, h, d } = sizeCanvas(); ctx.setTransform(d, 0, 0, d, 0, 0);
-  drawMatch(ctx, m, { w, h, flip: G.flip, faces: FACES, me: G.me, scale: Math.min(w / 44, h / 60) });
+  drawMatch(ctx, m, { w, h, flip: G.flip, faces: FACES, me: G.me, scale: Math.min(w / 30, h / 44), big: 1.45 });
+  updateButtons();
   $("sA").textContent = m.score[0]; $("sB").textContent = m.score[1]; $("clock").textContent = `${m.minute()}'`;
   requestAnimationFrame(loop);
 }
-// ---- 입력: 터치 조이스틱 + 버튼 + 키보드
-const IN = { mx: 0, my: 0, sprint: false, pass: false, shoot: false };
-const IN2 = { mx: 0, my: 0, sprint: false, pass: false, shoot: false };
+// ---- 입력: 터치 조이스틱 + 버튼 + 키보드(설정) + 게임패드
+const IN = { mx: 0, my: 0, sprint: false, pass: false, shoot: false, long: false, sw: false };
+const IN2 = { pass: false, shoot: false, long: false, sw: false };
 const keys = new Set();
 let joy = null;
 $("joyzone").addEventListener("pointerdown", (e) => { e.preventDefault(); const r = $("pitch").getBoundingClientRect(); joy = { id: e.pointerId, x: e.clientX, y: e.clientY }; const j = $("joy"); j.hidden = false; j.style.left = (e.clientX - r.left) + "px"; j.style.top = Math.min(r.height - 60, e.clientY - r.top) + "px"; try { $("joyzone").setPointerCapture(e.pointerId); } catch (_) {} });
@@ -367,36 +404,59 @@ const joyEnd = (e) => { if (!joy || joy.id !== e.pointerId) return; joy = null; 
 $("joyzone").addEventListener("pointerup", joyEnd); $("joyzone").addEventListener("pointercancel", joyEnd);
 const hold = (id, key) => { const b = $(id); const on = (e) => { e.preventDefault(); b.classList.add("down"); if (key === "sprint") IN.sprint = true; else IN[key] = true; }; const off = () => { b.classList.remove("down"); if (key === "sprint") IN.sprint = false; };
   b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointercancel", off); b.addEventListener("pointerleave", off); };
-hold("bPass", "pass"); hold("bShoot", "shoot"); hold("bSprint", "sprint");
+hold("bPass", "pass"); hold("bShoot", "shoot"); hold("bSprint", "sprint"); hold("bLong", "long");
+const profOf = (n) => (G && G.local2p ? (n === 0 ? OPT.keys.duo1 : OPT.keys.duo2) : OPT.keys.solo);
 addEventListener("keydown", (e) => {
-  if (!G) return; const k = e.key.toLowerCase(); if (keys.has(k)) return; keys.add(k);
-  if (G.local2p) { if (k === "f") IN.pass = true; if (k === "g") IN.shoot = true; if (k === "m") IN2.pass = true; if (k === ",") IN2.shoot = true; }
-  else { if (k === "j" || k === " ") IN.pass = true; if (k === "k" || k === "x") IN.shoot = true; }
-  if (k === "escape" || k === "p") togglePause();
-  if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
+  if (!G || !$("modal").hidden) return;   // 경기 중이 아니거나 창(키 설정·멈춤)이 열려 있으면 경기 키를 받지 않음
+  const c = e.code; if (keys.has(c)) return; keys.add(c);
+  const P1 = profOf(0), tgt1 = IN;
+  if (c === P1.pass) tgt1.pass = true; if (c === P1.shoot) tgt1.shoot = true; if (c === P1.long) tgt1.long = true; if (c === P1.switch) tgt1.sw = true;
+  if (G.local2p) { const P2 = profOf(1); if (c === P2.pass) IN2.pass = true; if (c === P2.shoot) IN2.shoot = true; if (c === P2.long) IN2.long = true; if (c === P2.switch) IN2.sw = true; }
+  if (c === "Escape" || c === "KeyP") togglePause();
+  if (c.startsWith("Arrow") || c === "Space" || c === "Tab") e.preventDefault();
 });
-addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
-function keyVec(up, down, left, right) { let x = 0, y = 0; if (keys.has(left)) x--; if (keys.has(right)) x++; if (keys.has(up)) y--; if (keys.has(down)) y++; const L = Math.hypot(x, y); return L ? [x / L, y / L] : [0, 0]; }
+addEventListener("keyup", (e) => keys.delete(e.code));
+addEventListener("blur", () => keys.clear());
+function keyVec(P) { let x = 0, y = 0; if (keys.has(P.left)) x--; if (keys.has(P.right)) x++; if (keys.has(P.up)) y--; if (keys.has(P.down)) y++; const L = Math.hypot(x, y); return L ? [x / L, y / L] : [0, 0]; }
+const padPrev = {};
+function readPad(idx) {   // 게임패드: 왼쪽 스틱/방향 패드, A 패스, B 슛, X 롱패스, RB·RT 질주, LB 선수 바꾸기
+  const gp = navigator.getGamepads ? navigator.getGamepads()[idx] : null; if (!gp) return null;
+  let x = gp.axes[0] || 0, y = gp.axes[1] || 0; if (Math.hypot(x, y) < 0.2) { x = 0; y = 0; }
+  const B = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+  if (B(12)) y = -1; if (B(13)) y = 1; if (B(14)) x = -1; if (B(15)) x = 1;
+  const prev = padPrev[idx] || {}, now = { a: B(0), b: B(1), x: B(2), lb: B(4) }; padPrev[idx] = now;
+  return { mx: x, my: y, sprint: B(5) || B(7), pass: now.a && !prev.a, shoot: now.b && !prev.b, long: now.x && !prev.x, sw: now.lb && !prev.lb };
+}
 function readInput() {   // 화면 기준 입력 → 1P(·2P)
-  let a = [IN.mx, IN.my], s1 = IN.sprint;
-  if (G.local2p) { const v = keyVec("w", "s", "a", "d"); if (v[0] || v[1]) a = v; s1 = s1 || keys.has("h"); }
-  else { const v1 = keyVec("arrowup", "arrowdown", "arrowleft", "arrowright"), v2 = keyVec("w", "s", "a", "d"); const v = v1[0] || v1[1] ? v1 : v2; if (v[0] || v[1]) a = v; s1 = s1 || keys.has("shift") || keys.has("l"); }
-  const out = [{ mx: a[0], my: a[1], sprint: s1, pass: IN.pass, shoot: IN.shoot }]; IN.pass = IN.shoot = false;
-  if (G.local2p) { const v = keyVec("arrowup", "arrowdown", "arrowleft", "arrowright"); out.push({ mx: v[0], my: v[1], sprint: keys.has("."), pass: IN2.pass, shoot: IN2.shoot }); IN2.pass = IN2.shoot = false; }
+  const P1 = profOf(0); let a = [IN.mx, IN.my]; let s1 = IN.sprint || keys.has(P1.sprint);
+  const v = keyVec(P1); if (v[0] || v[1]) a = v;
+  const pad = readPad(0); if (pad && (pad.mx || pad.my)) a = [pad.mx, pad.my];
+  const out = [{ mx: a[0], my: a[1], sprint: s1 || !!(pad && pad.sprint), pass: IN.pass || !!(pad && pad.pass), shoot: IN.shoot || !!(pad && pad.shoot), long: IN.long || !!(pad && pad.long), sw: IN.sw || !!(pad && pad.sw) }];
+  IN.pass = IN.shoot = IN.long = IN.sw = false;
+  if (G.local2p) { const P2 = profOf(1), v2 = keyVec(P2), pad2 = readPad(1); let b = v2; if (pad2 && (pad2.mx || pad2.my)) b = [pad2.mx, pad2.my];
+    out.push({ mx: b[0], my: b[1], sprint: keys.has(P2.sprint) || !!(pad2 && pad2.sprint), pass: IN2.pass || !!(pad2 && pad2.pass), shoot: IN2.shoot || !!(pad2 && pad2.shoot), long: IN2.long || !!(pad2 && pad2.long), sw: IN2.sw || !!(pad2 && pad2.sw) }); IN2.pass = IN2.shoot = IN2.long = IN2.sw = false; }
   return out;
 }
 function feed(inp, src, flip) {
   const f = flip ? -1 : 1; inp.mx = src.mx * f; inp.my = src.my * f; inp.moving = Math.hypot(src.mx, src.my) > 0.15; inp.sprint = !!src.sprint;
-  if (src.pass) inp.passQ = true; if (src.shoot) inp.shootQ = true;
+  if (src.pass) inp.passQ = true; if (src.shoot) inp.shootQ = true; if (src.long) inp.longQ = true; if (src.sw) inp.switchQ = true;
 }
 function applyLocalInput() {
   const r = readInput(); feed(G.m.input[0], r[0], false);
   if (G.local2p && r[1]) feed(G.m.input[1], r[1], false);
 }
+// 버튼 이름: 우리 팀이 공을 가졌는지에 따라
+let btnMode = "";
+function updateButtons() {
+  const m = G.m, me = G.me ?? 0, b = m.ball, att = b.owner >= 0 && m.ps[b.owner].t === me;
+  const mode = att ? "att" : "def"; if (mode === btnMode) return; btnMode = mode;
+  $("bPass").innerHTML = att ? "패스" : "몸태클"; $("bShoot").innerHTML = att ? "슛" : "다리<br>태클"; $("bLong").innerHTML = att ? "롱패스" : "선수<br>바꾸기";
+  $("bPass").classList.toggle("def", !att); $("bShoot").classList.toggle("def", !att);
+}
 let guestSeqT = 0;
 function sendGuestInput(dt) {
   guestSeqT += dt; const r = readInput()[0];
-  if (r.pass || r.shoot || guestSeqT > 0.05) { guestSeqT = 0; G.net.send({ k: "in", mx: +r.mx.toFixed(2), my: +r.my.toFixed(2), sp: r.sprint ? 1 : 0, p: r.pass ? 1 : 0, s: r.shoot ? 1 : 0 }); }
+  if (r.pass || r.shoot || r.long || r.sw || guestSeqT > 0.05) { guestSeqT = 0; G.net.send({ k: "in", mx: +r.mx.toFixed(2), my: +r.my.toFixed(2), sp: r.sprint ? 1 : 0, p: r.pass ? 1 : 0, s: r.shoot ? 1 : 0, l: r.long ? 1 : 0, w: r.sw ? 1 : 0 }); }
 }
 $("btnPause").onclick = () => togglePause();
 function togglePause() {
@@ -404,7 +464,8 @@ function togglePause() {
   if (G.net) { modal(`<h2>온라인 경기</h2><p class="sub">온라인 경기는 멈출 수 없어요.</p><div class="row" style="margin-top:12px"><button class="sm red" id="mQuit">경기 나가기</button><button class="sm" id="mBack">계속</button></div>`); $("mQuit").onclick = () => { closeModal(); quitMatch(); }; $("mBack").onclick = closeModal; return; }
   G.paused = true;
   modal(`<h2>잠깐 멈춤</h2><div class="kv"><span>점수</span><b>${G.m.score[0]} : ${G.m.score[1]}</b></div><div class="kv"><span>슛</span><b>${G.m.stats.shots[0]} : ${G.m.stats.shots[1]}</b></div>
-    <div class="row" style="margin-top:12px"><button class="big" id="mRes">계속</button><button class="sm red" id="mQuit">${G.mode === "career" ? "나가기(빠른 결과로 처리)" : "나가기"}</button></div>`);
+    <div class="row" style="margin-top:12px"><button class="big" id="mRes">계속</button><button class="sm" id="mKeys">⌨ 키 설정</button><button class="sm red" id="mQuit">${G.mode === "career" ? "나가기(빠른 결과로 처리)" : "나가기"}</button></div>`);
+  $("mKeys").onclick = () => keySettings(() => { G.paused = false; G.last = performance.now(); });
   $("mRes").onclick = () => { closeModal(); G.paused = false; G.last = performance.now(); };
   $("mQuit").onclick = () => { closeModal(); if (G.mode === "career") { G = null; const res = C.playMatchday(S); persist(); showResults(res); } else quitMatch(); };
 }
@@ -466,7 +527,7 @@ function hostRoom(myTeam) {
     msg: (mm) => {
       if (mm.k === "peer") net.send({ k: "hello", team: myTeam });
       if (mm.k === "hello") { guestTeam = mm.team; net.send({ k: "hello", team: myTeam }); beginHost(); }
-      if (mm.k === "in" && G && G.mode === "host") { feed(G.m.input[1], { mx: mm.mx, my: mm.my, sprint: mm.sp, pass: mm.p, shoot: mm.s }, true); }
+      if (mm.k === "in" && G && G.mode === "host") { feed(G.m.input[1], { mx: mm.mx, my: mm.my, sprint: mm.sp, pass: mm.p, shoot: mm.s, long: mm.l, sw: mm.w }, true); }
       if (mm.k === "left" && G) { toast("친구가 나갔어요"); G.ended = true; setTimeout(quitMatch, 1500); }
     },
     close: () => { if (!G) { const s = $("st"); if (s) s.textContent = "연결이 끊겼어요."; } },
