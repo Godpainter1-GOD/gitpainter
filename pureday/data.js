@@ -366,7 +366,7 @@ window.PORTAL = {
       "assets/mingtori/ep4-web-v1/060.webp",
       "assets/mingtori/ep4-web-v1/061.webp",
       "assets/mingtori/ep4-web-v1/062.webp",
-      "assets/mingtori/ep4-web-v1/063.webp",
+      "assets/mingtori/ep4-web-v1/063-kongi-v2.webp",
       "assets/mingtori/ep4-web-v1/064.webp",
       "assets/mingtori/ep4-web-v1/065.webp",
       "assets/mingtori/ep4-web-v1/066.webp",
