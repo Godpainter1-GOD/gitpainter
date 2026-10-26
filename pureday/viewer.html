@@ -30,7 +30,7 @@ select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
 </head>
 <body>
 <div class="bar" id="bar">
-  <a class="home" href="index.html#pureday" title="포털로">←</a>
+  <a class="home" href="index.html#mingtori" title="포털로">←</a>
   <div class="ttl" id="ttl"></div>
   <select id="sel" aria-label="회차 선택"></select>
   <div class="progress" id="prog"></div>
@@ -41,10 +41,10 @@ select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
   <p id="endNote"></p>
   <div class="nav" id="nav"></div>
 </div>
-<script src="data.js?v=20261026mingtoriv5"></script>
+<script src="data.js?v=20261026episodehallv1"></script>
 <script>
-const sid = new URLSearchParams(location.search).get('s') || 'pureday';  // 2026-10-20 시즌2 카드
-const s = window.PORTAL.series.find(x => x.id === sid) || window.PORTAL.series.find(x => x.id === 'pureday');
+const sid = new URLSearchParams(location.search).get('s') || 'mingtori';  // 2026-10-20 시즌2 카드
+const s = window.PORTAL.series.find(x => x.id === sid) || window.PORTAL.series.find(x => x.id === 'mingtori');
 const eps = s.episodes;
 const q = parseInt(new URLSearchParams(location.search).get('ep'), 10);
 const i = Math.max(0, eps.findIndex(e => e.num === q));
