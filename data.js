@@ -2695,7 +2695,7 @@ window.PORTAL = {
       "pureday/assets/mingtori/ep2-web-v1/061.webp",
       "pureday/assets/mingtori/ep2-web-v1/062.webp",
       "pureday/assets/mingtori/ep2-web-v1/063.webp",
-      "pureday/assets/mingtori/ep2-web-v1/064.webp",
+      "pureday/assets/mingtori/ep2-web-v1/064-sugar-v2.webp",
       "pureday/assets/mingtori/ep2-web-v1/065.webp",
       "pureday/assets/mingtori/ep2-web-v1/066.webp",
       "pureday/assets/mingtori/ep2-web-v1/067.webp",
