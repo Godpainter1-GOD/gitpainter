@@ -2543,7 +2543,7 @@ window.PORTAL = {
       "pureday/assets/mingtori/prologue-v5/033.png",
       "pureday/assets/mingtori/prologue-v5/034.png"
      ],
-     "thumb": "pureday/assets/mingtori/prologue-v5/001.png"
+     "thumb": "pureday/assets/mingtori/prologue-v5/019.png"
     },
     {
      "num": 1,
@@ -2623,7 +2623,7 @@ window.PORTAL = {
       "pureday/assets/mingtori/ep1-web-v1/069.webp",
       "pureday/assets/mingtori/ep1-web-v1/070.webp"
      ],
-     "thumb": "pureday/assets/mingtori/ep1-web-v1/001.webp"
+     "thumb": "pureday/assets/mingtori/cover-prologue-p30-v1.png"
     },
     {
      "num": 2,

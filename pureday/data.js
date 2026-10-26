@@ -51,7 +51,7 @@ window.PORTAL = {
       "assets/mingtori/prologue-v5/033.png",
       "assets/mingtori/prologue-v5/034.png"
      ],
-     "thumb": "assets/mingtori/prologue-v5/001.png"
+     "thumb": "assets/mingtori/prologue-v5/019.png"
     },
     {
      "num": 1,
@@ -131,7 +131,7 @@ window.PORTAL = {
       "assets/mingtori/ep1-web-v1/069.webp",
       "assets/mingtori/ep1-web-v1/070.webp"
      ],
-     "thumb": "assets/mingtori/ep1-web-v1/001.webp"
+     "thumb": "assets/mingtori/cover-prologue-p30-v1.png"
     },
     {
      "num": 2,
