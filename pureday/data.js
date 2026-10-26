@@ -7,7 +7,7 @@ window.PORTAL = {
    "genre": "퓨어데이 외전 · 시즌2 그림체 웹툰",
    "logline": "강원도 대관령 목장에서 소와 강아지의 말을 듣던 아이 허지유. 그 귀를 스스로 닫고 배우 '밍토리'가 되었다가, 자신을 떨어뜨린 말과 다시 친해지며 귀가 열리고, 히말라야 너머 자기 뿌리를 만나 생명을 살리는 수의사가 되기까지.",
    "status": "프롤로그 공개 · 34컷",
-   "cover": "../assets/mingtori/cover.jpg",
+   "cover": "assets/mingtori/cover-prologue-p30-v1.png",
    "episodes": [
     {
      "num": 0,
