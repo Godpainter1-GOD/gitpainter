@@ -41,8 +41,10 @@ select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
   <p id="endNote"></p>
   <div class="nav" id="nav"></div>
 </div>
+<link rel="stylesheet" href="mingtori-boards-v1.css?v=mt08to12v1">
+<script src="mingtori-boards-v1.js?v=mt08to12v1"></script>
 <script src="mingtori-panels-v1.js?v=mt00to06panelsv1"></script>
-<script src="data.js?v=pds1mingtori20261028v1"></script>
+<script src="data.js?v=20261028mt08to12v2"></script>
 <script>
 const sid = new URLSearchParams(location.search).get('s') || 'pureday';  // 2026-10-20 시즌2 카드
 const s = window.PORTAL.series.find(x => x.id === sid) || window.PORTAL.series.find(x => x.id === 'pureday');
@@ -60,7 +62,9 @@ for (const e of eps) sel.add(new Option(`${name(e)} · ${e.title}`, e.num, false
 sel.onchange = () => location.href = `viewer.html?s=${s.id}&ep=${sel.value}`;
 
 const strip = document.getElementById('strip');
-if(ep.panelLayout==='native-webtoon-divided'){
+if(ep.panelLayout==='native-board-cells'){
+  renderMingtoriBoards(strip,ep);
+}else if(ep.panelLayout==='native-webtoon-divided'){
   renderDividedPanels(strip,ep);
 }else{
 ep.pages.forEach((src, k) => {
@@ -72,7 +76,7 @@ ep.pages.forEach((src, k) => {
 }
 
 document.getElementById('endTitle').textContent = `${name(ep)} · ${ep.title} 끝`;
-document.getElementById('endNote').textContent = next ? `다음: ${name(next)} · ${next.title}` : '다음 화를 준비하고 있어요.';
+document.getElementById('endNote').textContent = next ? `다음: ${name(next)} · ${next.title}` : (sid==='mingtori' && ep.num===12 ? '밍토리 외전 완결 · 퓨어데이 2부로 이어집니다.' : '다음 화를 준비하고 있어요.');
 document.getElementById('nav').innerHTML =
   (prev ? `<a href="${url(prev)}">← ${name(prev)}</a>` : '') +
   `<a href="index.html#${s.id}">목록</a>` +
