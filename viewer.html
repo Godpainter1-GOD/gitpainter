@@ -41,7 +41,8 @@ select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
   <p id="endNote"></p>
   <div class="nav" id="nav"></div>
 </div>
-<script src="data.js?v=20261027mt07panelsv2"></script>
+<script src="mingtori-panels-v1.js?v=mt00to06panelsv1"></script>
+<script src="data.js?v=20261027mt00to06panelsv1"></script>
 <script>
 const sid = new URLSearchParams(location.search).get('s') || 'pureday';  // 2026-10-20 시즌2 카드
 const s = window.PORTAL.series.find(x => x.id === sid) || window.PORTAL.series.find(x => x.id === 'pureday');
@@ -59,12 +60,16 @@ for (const e of eps) sel.add(new Option(`${name(e)} · ${e.title}`, e.num, false
 sel.onchange = () => location.href = `viewer.html?s=${s.id}&ep=${sel.value}`;
 
 const strip = document.getElementById('strip');
+if(ep.panelLayout==='native-webtoon-divided'){
+  renderDividedPanels(strip,ep);
+}else{
 ep.pages.forEach((src, k) => {
   const im = new Image();
   im.src = src; im.alt = `${name(ep)} ${k + 1}`;
   if (k > 2) im.loading = 'lazy';
   strip.appendChild(im);
 });
+}
 
 document.getElementById('endTitle').textContent = `${name(ep)} · ${ep.title} 끝`;
 document.getElementById('endNote').textContent = next ? `다음: ${name(next)} · ${next.title}` : '다음 화를 준비하고 있어요.';
