@@ -56,19 +56,19 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 40p
 <header>
   <small>WEBTOON PORTAL</small>
   <h1>펜으로 그린 이야기</h1>
-  <p>검은 잉크 펜 선과 수채로 그린 두 편의 웹툰. 보이지 않는 것을 보게 된 사람들의 이야기.</p>
+  <p>일상의 마음에서 새로운 부르심까지. 퓨어데이와 함께하는 웹툰 이야기.</p>
 </header>
 <nav id="nav"></nav>
 <main id="main"></main>
 <footer>여호수아 시즌1은 기존 Joshua-story 사이트에서 열립니다.</footer>
-<script src="data.js?v=20261028s1ep1repaint3"></script>
+<script src="data.js?v=20261028s3ep01v1"></script>
 <script>
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nav = document.getElementById('nav'), main = document.getElementById('main');
 for (const s of window.PORTAL.series) {
   const own = s.id.startsWith('pureday') || s.id === 'mingtori';  // 2026-10-20 시즌2 카드(pureday2)도 자체 뷰어 · 2026-10-26 외전 밍토리도
   const first = s.episodes[0];
-  const read = e => own ? `viewer.html?s=${s.id}&ep=${e.num}` : e.mobile;
+  const read = e => e.reader || (own ? `viewer.html?s=${s.id}&ep=${e.num}` : e.mobile);
   nav.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${esc(s.title)}</a>`);
   const eps = s.episodes.map(e => `
     <li class="ep">
