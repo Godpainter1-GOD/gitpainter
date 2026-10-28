@@ -1,7 +1,9 @@
 // 퓨어데이 FC — 커리어 v3 (2026-10-25): 여러 리그·승강제, 실제 구단 맡기 / 뉴팀 창단, 운영비, 여름·겨울·FA 이적시장, 트레이드
-import { makeWorld, makeStarterSquad, ovr, fitOvr, marketValue, formulaValue, wageOf, money, autoLineup, teamRating, DEFAULT_TACTIC, PRESETS, FORMATIONS, migrateTactic, rng, getNextId, setNextId, AKEYS, clampA } from "./data.js?v=6";
-import { quickSim } from "./engine.js?v=6";
-import { PROMO, COUNTRY } from "./realdata.js?v=6";
+// v7 (2026-10-27): 컵 대회(cups.js)·리그 1~3위 상금·득점왕/도움왕 상금·시즌 수입 집계(S.earn)·시즌 엔딩(S.endings)
+import { makeWorld, makeStarterSquad, ovr, fitOvr, marketValue, formulaValue, wageOf, money, autoLineup, teamRating, DEFAULT_TACTIC, PRESETS, FORMATIONS, migrateTactic, rng, getNextId, setNextId, AKEYS, clampA } from "./data.js";
+import { quickSim } from "./engine.js";
+import { PROMO, COUNTRY } from "./realdata.js?v=8";
+import { startCups, runIdle, runEvent, pendingEvent, cupFixture, finishAll, nextCupEvents, compScorer, comp, flagOfCountry } from "./cups.js?v=8";
 
 export const MY = "my";
 export const WINDOW_DAYS = 5;
@@ -40,7 +42,7 @@ export function newCareer(opts) {
 }
 function levelOf(players, clubIds) { const set = new Set(clubIds); const os = players.filter((p) => set.has(p.club)).map((p) => ovr(p)).sort((a, b) => b - a); const top = os.slice(0, Math.max(11, Math.floor(os.length * 0.45))); return Math.round(top.reduce((s, v) => s + v, 0) / Math.max(1, top.length)); }
 function setupLeague(S, l, r) { l.fixtures = makeFixtures(l.clubs, r); l.played = 0; l.table = {}; for (const id of l.clubs) l.table[id] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; }
-function makeFixtures(ids0, r) {   // 원형 방식 더블 라운드로빈, 홀수면 쉬는 팀
+export function makeFixtures(ids0, r) {   // 원형 방식 더블 라운드로빈, 홀수면 쉬는 팀
   const ids = ids0.slice(); for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
   if (ids.length % 2) ids.push(null);
   const n = ids.length, arr = ids.slice(), rounds = [];
@@ -73,7 +75,13 @@ export const leagueOf = (S, cid) => S.leagues.find((l) => l.clubs.includes(cid))
 export const payroll = (S, id) => squad(S, id).reduce((s, p) => s + (p.wage || wageOf(p)), 0);
 export const windowOpen = (S) => S.phase === "summer" || S.phase === "winter" || S.phase === "fa";
 export function news(S, text, kind = "info") { S.news.unshift({ text, kind, season: S.season, phase: S.phase }); if (S.news.length > 150) S.news.length = 150; }
-function finLog(S, cid, amount, what) { if (cid === MY) { S.fin.unshift({ amount, what, season: S.season }); if (S.fin.length > 80) S.fin.length = 80; } const c = club(S, cid); if (c) c.budget += amount; }
+// 돈 기록. cat(시즌 수입 집계용)을 안 주면 내용으로 짐작
+const CAT = [[/이적료|계약금|해지/, "transfer"], [/주급/, "wage"], [/입장/, "gate"], [/수당/, "bonus"], [/상금/, "prize"], [/스폰서/, "sponsor"]];
+export function finLog(S, cid, amount, what, cat) {
+  if (cid === MY) { S.fin.unshift({ amount, what, season: S.season }); if (S.fin.length > 80) S.fin.length = 80;
+    const k = cat || (CAT.find(([re]) => re.test(what)) || [0, "etc"])[1]; S.earn = S.earn || {}; S.earn[k] = (S.earn[k] || 0) + amount; }
+  const c = club(S, cid); if (c) c.budget += amount;
+}
 export function seasonLabel(S) { return `${S.year}/${String((S.year + 1) % 100).padStart(2, "0")}`; }
 export function standings(S, l = myLeague(S)) { return l.clubs.map((id) => ({ c: club(S, id), ...l.table[id] })).sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf); }
 export function fixLineup(S, cid) {
@@ -92,10 +100,15 @@ export function fixLineup(S, cid) {
   return S.lineups[cid];
 }
 export function rating(S, cid) { const lu = fixLineup(S, cid); return teamRating(squad(S, cid), lu, S.tactics[cid]).ovr; }
-export function nextFixture(S) { if (S.phase !== "league") return null; const l = myLeague(S), md = l.fixtures[l.played]; return md && md.find((f) => f.h === MY || f.a === MY) || (md ? { bye: true } : null); }
+export function nextFixture(S) {
+  if (S.phase !== "league") return null;
+  const cf = cupFixture(S); if (cf) return cf;   // 컵 대회 경기가 먼저
+  const l = myLeague(S), md = l.fixtures[l.played], f = md && md.find((x) => x.h === MY || x.a === MY);
+  return f ? { ...f, label: `${l.name} ${l.played + 1}라운드` } : md ? { bye: true, label: `${l.name} ${l.played + 1}라운드` } : null;
+}
 export function phaseInfo(S) {
   const l = myLeague(S), R = l.fixtures.length, half = Math.floor(R / 2);
-  if (S.phase === "league") return `${l.name} ${l.played + 1}라운드 / ${R}` + (l.played < half ? ` · 겨울 이적시장까지 ${half - l.played}경기` : "");
+  if (S.phase === "league") { const ce = nextCupEvents(S, 1)[0]; return `${l.name} ${l.played + 1}라운드 / ${R}` + (l.played < half ? ` · 겨울 이적시장까지 ${half - l.played}경기` : "") + (ce ? ` · 다음 ${ce.comp.icon} ${ce.comp.name}: ${ce.at <= l.played ? "이번 차례" : `리그 ${ce.at - l.played}경기 뒤`}` : ""); }
   if (windowOpen(S)) return `${PHASE_KO[S.phase]} ${S.day}일째 / ${WINDOW_DAYS}일`;
   return "";
 }
@@ -198,10 +211,13 @@ export function advanceDay(S, rand = Math.random) {
 function aiTransfers(S, rand) {
   const fa = S.players.filter((p) => !p.club);
   const pool = S.players.filter((p) => p.club && p.club !== MY);
+  // FA 는 하루 한 번만 정렬(리그가 늘어 FA 가 수천 명이라 구단마다 정렬하면 느림)
+  const faList = fa.map((p) => ({ p, o: ovr(p), mv: marketValue(p), b: signBonus(p) })).sort((a, b) => b.o - a.o);
   for (const c of S.clubs) {
     if (c.my) continue; const sq = squad(S, c.id);
     if (sq.length < 20) {   // 모자라면 FA 로 채움(싼 선수부터 형편껏)
-      for (const p of fa.filter((q) => !q.club).sort((a, b) => ovr(b) - ovr(a))) { if (squad(S, c.id).length >= 20) break; const bonus = signBonus(p); if (c.budget > bonus * 2 && marketValue(p) < c.sqVal * 0.25 + 2e5) { p.club = c.id; touch(S); p.contract = 2; p.wage = wageDemand(S, p, c.id); c.budget -= bonus; if (marketValue(p) > 2e6) news(S, `✍ ${c.name}, 자유 계약 ${p.name} 영입`); } }
+      let n = sq.length;
+      for (const { p, mv, b: bonus } of faList) { if (n >= 20) break; if (p.club) continue; if (c.budget > bonus * 2 && mv < c.sqVal * 0.25 + 2e5) { p.club = c.id; touch(S); n++; p.contract = 2; p.wage = wageDemand(S, p, c.id); c.budget -= bonus; if (mv > 2e6) news(S, `✍ ${c.name}, 자유 계약 ${p.name} 영입`); } }
     }
     if (rand() > 0.3) continue;
     const avg = sq.reduce((s, p) => s + ovr(p), 0) / Math.max(1, sq.length);
@@ -222,6 +238,14 @@ function closeWindow(S) {
   S.phase = "league"; S.day = 0;
   news(S, was === "summer" ? `⚽ ${seasonLabel(S)} 시즌 개막! 여름 이적시장이 닫혔어요.` : "❄ 겨울 이적시장이 닫혔어요. 후반기 시작!");
   for (const c of S.clubs) fixLineup(S, c.id);
+  if (was === "summer") startCups(S);
+  runIdle(S);
+}
+// 예전 저장(컵 대회 없음): 시즌 전이면 지금 만들고, 시즌 중이면 다음 시즌부터
+export function ensureCups(S) {
+  if (S.comps) { runIdle(S); return; }
+  if (S.phase === "league" && myLeague(S).played > 0) { S.comps = []; S.cal = []; S.calI = 0; news(S, "🏆 컵 대회(FA컵·리그컵·챔피언스리그·유럽연합리그)는 다음 시즌부터 열려요.", "my"); return; }
+  if (S.phase === "league") { startCups(S); runIdle(S); }
 }
 
 // ---------------------------------------------------------------- 경기 진행
@@ -248,6 +272,8 @@ function playRound(S, l, myResult, rand) {
 }
 export function playMatchday(S, myResult = null, rand = Math.random) {
   if (S.phase !== "league") return null;
+  const ev = pendingEvent(S);
+  if (ev) { const out = runEvent(S, ev, myResult, rand); runIdle(S, rand); return out; }   // 컵 대회 차례
   const L = myLeague(S), R = L.fixtures.length;
   const results = playRound(S, L, myResult, rand);
   for (const l of S.leagues) { if (l === L) continue; const target = Math.floor(L.played * l.fixtures.length / R); while (l.played < target) playRound(S, l, null, rand); }
@@ -255,14 +281,16 @@ export function playMatchday(S, myResult = null, rand = Math.random) {
   if (my) { const me = my.h === MY ? 0 : 1, gf = my.score[me], ga = my.score[1 - me], opp = club(S, me === 0 ? my.a : my.h); news(S, `${gf > ga ? "🟢 승리" : gf < ga ? "🔴 패배" : "⚪ 무승부"} ${L.played}R ${club(S, my.h).short} ${my.score[0]}:${my.score[1]} ${club(S, my.a).short} (vs ${opp.name})`, "my"); }
   if (L.played === Math.floor(R / 2)) { S.phase = "winter"; S.day = 1; S.superday = { season: S.season, done: false }; news(S, "❄ 겨울 이적시장이 열렸어요! ⭐ 시즌 중간 슈퍼데이(상위·하위 스플릿 올스타전)도 열려요.", "my"); }
   else if (L.played >= R) { for (const l of S.leagues) while (l.played < l.fixtures.length) playRound(S, l, null, rand); endSeason(S, rand); }
-  return { results, league: L.id };
+  runIdle(S, rand);
+  return { results, league: L.id, title: `${L.name} ${L.played || R}라운드 결과` };
 }
 // ---------------------------------------------------------------- 선수 기록
 export const ST0 = () => ({ apps: 0, g: 0, a: 0, fouls: 0, yc: 0, rc: 0, inj: 0, rat: 0, motm: 0, cs: 0 });
 export const st = (p) => (p.st || (p.st = ST0()));
+const stL = st;
 export const avail = (p) => !(p.inj > 0) && !(p.sus > 0);
 export const avgRat = (p) => (p.st && p.st.apps ? p.st.rat / p.st.apps : 0);
-function recover(p, rounds) {
+export function recover(p, rounds) {
   if (p.fit == null) p.fit = 100;
   for (let k = 0; k < rounds; k++) p.fit = Math.min(100, p.fit + 3 + (100 - p.fit) * 0.4 + ((p.sta || 80) - 80) / 8);   // 지친 만큼 더 회복: 계속 뛰면 체력 80 선수는 약 85, 60 은 약 72, 100 은 약 97 에 머묾
   if (p.inj > 0) { p.inj = Math.max(0, p.inj - rounds); }
@@ -271,12 +299,15 @@ function recover(p, rounds) {
 }
 function pickW(arr, w, rand) { const tot = w.reduce((a, b) => a + b, 0); let r = rand() * tot; for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; }
 // 한 경기의 기록 남기기. det(직접 뛴 경기) = { scorers, assists, fouls:{id:n}, cards:[{id,type}], energy:{id:0~1} }, 없으면 만들어 냄. 반환: 경기 최우수 선수 id
-export function recordMatch(S, f, sc, det, rand = Math.random) {
+// kind(컵 대회 "fa"|"lc"|"cl"|"eul")를 주면 기록은 p.cst[kind] 에 따로(리그 득점왕에 섞이지 않게)
+export const cst = (p, kind) => { const o = p.cst || (p.cst = {}); return o[kind] || (o[kind] = ST0()); };
+export function recordMatch(S, f, sc, det, rand = Math.random, kind = null) {
+  const st = kind ? (p) => cst(p, kind) : stL;
   const sides = [f.h, f.a].map((cid, k) => ({ cid, gf: sc[k], ga: sc[1 - k], xi: (S.lineups[cid] || fixLineup(S, cid)).xi.map((id) => player(S, id)).filter(Boolean) }));
   const rat = new Map(), info = (p) => { if (!rat.has(p.id)) rat.set(p.id, 6.3 + (rand() - 0.5) * 1.2); return p; };
   const scorers = det ? det.scorers || [] : [], assists = det ? det.assists || [] : [];
   for (const sd of sides) {
-    for (const p of sd.xi) { info(p); const s = st(p); s.apps++; p._played = true; p.apps = s.apps;
+    for (const p of sd.xi) { info(p); const s = st(p); s.apps++; p._played = true; if (!kind) p.apps = s.apps;
       const win = sd.gf > sd.ga ? 0.45 : sd.gf < sd.ga ? -0.35 : 0.05; rat.set(p.id, rat.get(p.id) + win);
       if (p.pos === "GK") { if (sd.ga === 0) { s.cs++; rat.set(p.id, rat.get(p.id) + 0.9); } else rat.set(p.id, rat.get(p.id) - Math.max(0, sd.ga - 1) * 0.35); }
       else if (["CB", "LB", "RB", "DM"].includes(p.pos) && sd.ga === 0) rat.set(p.id, rat.get(p.id) + 0.35);
@@ -307,7 +338,7 @@ export function recordMatch(S, f, sc, det, rand = Math.random) {
     for (const [id, n] of Object.entries(det.fouls || {})) { const p = player(S, id); if (p) { st(p).fouls += n; if (rat.has(id)) rat.set(id, rat.get(id) - 0.05 * n); } }
     for (const c of det.cards || []) { const p = player(S, c.id); if (!p) continue; if (c.type === "yellow") { st(p).yc++; if (st(p).yc % 5 === 0) p.sus = (p.sus || 0) + 1; } else { st(p).rc++; p.sus = (p.sus || 0) + 1; } if (rat.has(c.id)) rat.set(c.id, rat.get(c.id) - (c.type === "red" ? 1 : 0.25)); }
   }
-  scorers.forEach((id) => { const p = player(S, id); if (!p) return; st(p).g++; p.sg = st(p).g; if (rat.has(id)) rat.set(id, rat.get(id) + 1); });
+  scorers.forEach((id) => { const p = player(S, id); if (!p) return; st(p).g++; if (!kind) p.sg = st(p).g; if (rat.has(id)) rat.set(id, rat.get(id) + 1); });
   assists.forEach((id) => { if (!id) return; const p = player(S, id); if (!p) return; st(p).a++; if (rat.has(id)) rat.set(id, rat.get(id) + 0.6); });
   let best = null, bv = -1;
   for (const [id, r0] of rat) { const r = Math.max(3.5, Math.min(10, r0)); const p = player(S, id); if (!p) continue; st(p).rat += r; if (r > bv) { bv = r; best = p; } }
@@ -363,14 +394,29 @@ function pickScorers(S, cid, n, rand) {
   for (let k = 0; k < n; k++) { let r = rand() * tot; for (let i = 0; i < xi.length; i++) { r -= w[i]; if (r <= 0) { out.push(xi[i].id); break; } } }
   return out;
 }
+const brief = (c) => (c ? { id: c.id, name: c.name, short: c.short, c1: c.c1, c2: c.c2 } : null);
+const pBrief = (S, p, n) => (p ? { name: p.name, club: club(S, p.club) ? club(S, p.club).name : "", n } : null);
+// 상금 비율(리그 경제 규모 × 비율): 순위 배당금(1위 8% → 꼴찌 1.6%) + 1~3위 상금 + 득점왕·도움왕 상금(구단에)
+export const LEAGUE_PRIZE = { podium: [0.10, 0.06, 0.035], scorer: 0.012, assist: 0.008 };
 function endSeason(S, rand) {
-  const label = seasonLabel(S), myL = myLeague(S);
-  // 상금(리그 경제 규모에 맞춰)·평판
+  finishAll(S, rand);   // 혹시 남은 컵 경기
+  const label = seasonLabel(S), myL = myLeague(S), end = { season: label, leagues: [], comps: [] };
   for (const l of S.leagues) {
-    const tab = standings(S, l), base = (l.econ || 2e8) * 0.08;
-    tab.forEach((row, i) => { finLog(S, row.c.id, Math.round(base * (1 - i / tab.length * 0.8) / 1e4) * 1e4, `${label} ${l.name} ${i + 1}위 상금`); row.c.rep = Math.max(15, Math.min(98, (row.c.rep || 50) + (tab.length / 2 - i) * 0.6)); });
+    const tab = standings(S, l), E = l.econ || 2e8, base = E * 0.08, r4 = (v) => Math.round(v / 1e4) * 1e4;
+    tab.forEach((row, i) => { finLog(S, row.c.id, r4(base * (1 - i / tab.length * 0.8)), `${label} ${l.name} ${i + 1}위 배당 상금`); row.c.rep = Math.max(15, Math.min(98, (row.c.rep || 50) + (tab.length / 2 - i) * 0.6)); });
+    ["우승", "준우승", "3위"].forEach((w, i) => { if (tab[i]) finLog(S, tab[i].c.id, r4(E * LEAGUE_PRIZE.podium[i]), `${l.name} ${w} 상금`, "prize"); });
+    const aw = awardsFor(S, l);
+    if (aw.scorer) finLog(S, aw.scorer.club, r4(E * LEAGUE_PRIZE.scorer), `${l.name} 득점왕 상금 (${aw.scorer.name})`, "prize");
+    if (aw.assist) finLog(S, aw.assist.club, r4(E * LEAGUE_PRIZE.assist), `${l.name} 도움왕 상금 (${aw.assist.name})`, "prize");
+    end.leagues.push({ id: l.id, name: l.name, country: l.country, flag: flagOfCountry(l.country), tier: l.tier, podium: tab.slice(0, 3).map((r) => brief(r.c)),
+      scorer: aw.scorer && pBrief(S, aw.scorer, aw.scorer.st.g), assist: aw.assist && pBrief(S, aw.assist, aw.assist.st.a), mvp: aw.mvp && pBrief(S, aw.mvp, +avgRat(aw.mvp).toFixed(2)) });
+    S.lastRank = S.lastRank || {}; S.lastRank[l.id] = tab.map((r) => r.c.id);   // 다음 시즌 유럽 대회 출전권
   }
+  for (const c of S.comps || []) end.comps.push({ id: c.id, kind: c.kind, name: c.name, icon: c.icon, country: c.country || null, flag: c.country ? flagOfCountry(c.country) : "", podium: c.podium.map((id) => brief(club(S, id))), scorer: compScorer(S, c), my: c.myIn ? c.myRes || "" : null });
+  const cl = comp(S, "cl"), eul = comp(S, "eul"); S.lastEuro = { cl: cl && cl.podium[0], eul: eul && eul.podium[0] };
   const myTab = standings(S, myL), myRank = myTab.findIndex((r) => r.c.id === MY) + 1;
+  { const t = myL.table[MY]; end.my = { ...brief(club(S, MY)), league: myL.name, flag: flagOfCountry(myL.country), rank: myRank, n: myTab.length, pts: t.pts, w: t.w, d: t.d, l: t.l, gf: t.gf, ga: t.ga,
+      trophies: [...(myRank === 1 ? [`${myL.name} 우승`] : []), ...(S.comps || []).filter((c) => c.podium[0] === MY).map((c) => `${c.name} 우승`)] }; }
   const top = S.players.filter((p) => p.club && myL.clubs.includes(p.club)).sort((a, b) => (b.sg || 0) - (a.sg || 0))[0];
   // 시상(우리 리그)
   const aw = awardsFor(S, myL), nm = (p, extra) => (p ? { id: p.id, name: p.name, club: club(S, p.club) ? club(S, p.club).name : "", extra } : null);
@@ -383,6 +429,7 @@ function endSeason(S, rand) {
   const moves = promoteRelegate(S);
   const myMove = moves.find((m) => m.id === MY);
   S.history.unshift({ season: label, league: myL.name, champion: myTab[0].c.name, myRank, myPts: myL.table[MY].pts, topScorer: top ? `${top.name} ${top.sg}골` : "", move: myMove ? myMove.kind : "" });
+  end.my.move = myMove ? myMove.kind : "";
   news(S, `🏆 ${label} ${myL.name} 우승: ${myTab[0].c.name}! 우리 팀 ${myRank}위${myMove ? (myMove.kind === "up" ? " — 🎉 승격!" : " — 강등") : ""} · 득점왕 ${top ? top.name + " " + top.sg + "골" : "-"}`, "my");
   for (const l of S.leagues) if (l !== myL) { const t = standings(S, l)[0]; if (t) news(S, `🏆 ${l.name} 우승: ${t.c.name}`); }
   // 계약·나이·성장
@@ -405,25 +452,31 @@ function endSeason(S, rand) {
   if (expired) news(S, `📋 다른 구단 선수 ${expired}명이 계약 만료로 FA 가 됐어요.`);
   S.players = S.players.filter((p) => !(p.club == null && p.age >= 36 && !p.face));
   for (const c of S.clubs) { const l = leagueOf(S, c.id); finLog(S, c.id, Math.round(((l && l.econ) || 2e8) * (0.02 + (c.rep || 50) / 2500) / 1e4) * 1e4, "스폰서 계약"); }
+  // 시즌 엔딩(한눈에 보기) 저장 → 화면이 결과 창 뒤에 띄움
+  end.my.earn = { ...(S.earn || {}) }; end.my.budget = club(S, MY).budget;
+  S.endings = S.endings || []; S.endings.unshift(end); if (S.endings.length > 6) S.endings.length = 6; S.endingNew = true; S.earn = {};
   S.season++; S.year++; S.phase = "fa"; S.day = 1;
   const r = rng(S.seed + S.season); for (const l of S.leagues) setupLeague(S, l, r);
-  for (const p of S.players) { p.sg = 0; p.apps = 0; p.st = null; p.sus = 0; p.fit = 100; }
+  for (const p of S.players) { p.sg = 0; p.apps = 0; p.st = null; p.cst = null; p.sus = 0; p.fit = 100; }
   S.superday = null;
   news(S, `📋 FA 이적시장이 열렸어요 — 계약이 끝난 선수들을 잡을 수 있어요.`, "my");
   for (const c of S.clubs) fixLineup(S, c.id);
 }
+const RESERVE = / (B|II|U21|U23|Juniors|Amateure( OÖ)?|Reserves|Castilla)$| B$|Young Violets|Liefering/;
 function promoteRelegate(S) {
   const moves = []; const byC = {};
   for (const l of S.leagues) (byC[l.country] = byC[l.country] || []).push(l);
   for (const [country, ls] of Object.entries(byC)) {
     const rule = PROMO[country]; if (!rule) continue;
-    for (const [hiTier, n] of [[1, rule[0]], [2, rule[1]]]) {
+    for (const [hiTier, n] of [[1, rule[0]], [2, rule[1]]]) { if (!n) continue;
       const hi = ls.filter((l) => l.tier === hiTier), lo = ls.filter((l) => l.tier === hiTier + 1); if (!hi.length || !lo.length) continue;
       const H = hi[0]; const down = standings(S, H).slice(-n).map((r) => r.c.id);
       // 아래 리그가 여러 조면 조마다 나눠서 올림
+      // 조가 올라갈 팀 수보다 많으면(오스트리아 3부 4개 조 등) 조 1위 중 승점률 높은 팀부터
       const per = Math.ceil(n / lo.length); let up = [];
-      lo.forEach((L) => up.push(...standings(S, L).slice(0, per).map((r) => ({ id: r.c.id, from: L }))));
-      up = up.slice(0, n);
+      // 2군(B·II·U21·Juniors 등)은 승격하지 않음 — 다음 순위 팀이 올라감
+      lo.forEach((L) => up.push(...standings(S, L).filter((r) => !RESERVE.test(r.c.en || r.c.name)).slice(0, per).map((r, k) => ({ id: r.c.id, from: L, k, ppg: r.pts / Math.max(1, r.p) }))));
+      up = up.sort((x, y) => x.k - y.k || y.ppg - x.ppg).slice(0, n);
       H.clubs = H.clubs.filter((id) => !down.includes(id)).concat(up.map((u) => u.id));
       up.forEach((u) => { u.from.clubs = u.from.clubs.filter((id) => id !== u.id); });
       down.forEach((id, k) => { const L = up[k] ? up[k].from : lo[k % lo.length]; L.clubs.push(id); });
@@ -436,7 +489,7 @@ function promoteRelegate(S) {
 }
 
 // ---------------------------------------------------------------- 저장: 칸 3개, gzip 으로 줄여 localStorage 에(실제 리그 2MB → 약 0.3MB)
-const KEEP = ["id", "name", "nat", "age", "pos", ...AKEYS, "pot", "club", "contract", "value", "wage", "face", "sg", "apps", "num", "lastClub", "st", "car", "fit", "inj", "sus"];
+const KEEP = ["id", "name", "nat", "age", "pos", ...AKEYS, "pot", "club", "contract", "value", "wage", "face", "sg", "apps", "num", "lastClub", "st", "cst", "car", "fit", "inj", "sus"];
 export const SLOTS = [1, 2, 3];
 const slotKey = (n) => `pureday-fc-slot${n}`;
 function slim(S) { const o = { ...S, players: S.players.map((p) => { const q = {}; for (const k of KEEP) if (p[k] != null) q[k] = p[k]; return q; }) }; delete o._ver; return o; }
@@ -453,18 +506,66 @@ async function ungz(s) {
 let saving = Promise.resolve();
 export function save(S) {
   const slot = S.slot || 1, data = slim(S);
-  const meta = { slot, name: club(S, MY).name, league: myLeague(S).name, season: seasonLabel(S), phase: S.phase, saved: Date.now(), mode: S.mode };
-  saving = saving.then(async () => { try { localStorage.setItem(slotKey(slot), await gz(JSON.stringify(data))); localStorage.setItem(slotKey(slot) + "-meta", JSON.stringify(meta)); localStorage.setItem("pureday-fc-cur", String(slot)); } catch (e) { console.warn("저장 실패", e); } });
+  const meta = { slot, name: club(S, MY).name, league: myLeague(S).name, season: seasonLabel(S), phase: S.phase, saved: Date.now(), mode: S.mode, cloud: S.cloud ? S.cloud.code : "" };
+  saving = saving.then(async () => { try { const z = await gz(JSON.stringify(data)); localStorage.setItem(slotKey(slot), z); localStorage.setItem(slotKey(slot) + "-meta", JSON.stringify(meta)); localStorage.setItem("pureday-fc-cur", String(slot)); if (S.cloud) cloudQueue(S, z, meta); } catch (e) { console.warn("저장 실패", e); } });
   return true;
 }
 export function slotMeta(n) { try { return JSON.parse(localStorage.getItem(slotKey(n) + "-meta") || "null"); } catch (e) { return null; } }
 export function currentSlot() { const n = +(localStorage.getItem("pureday-fc-cur") || 0); return SLOTS.includes(n) ? n : 0; }
-export async function loadSlot(n) { try { const s = localStorage.getItem(slotKey(n)); if (!s) return null; const S = JSON.parse(await ungz(s)); S.slot = n; return S; } catch (e) { console.warn("불러오기 실패", e); return null; } }
-export function deleteSlot(n) { try { localStorage.removeItem(slotKey(n)); localStorage.removeItem(slotKey(n) + "-meta"); if (currentSlot() === n) localStorage.removeItem("pureday-fc-cur"); } catch (e) {} }
+export async function loadSlot(n) { try { const s = localStorage.getItem(slotKey(n)); if (!s) return null; const S = JSON.parse(await ungz(s)); S.slot = n; const rv = JSON.parse(localStorage.getItem(slotKey(n) + "-rev") || "null"); if (S.cloud && rv && rv.code === S.cloud.code) S.cloud.rev = Math.max(S.cloud.rev, rv.rev); ensureCups(S); return S; } catch (e) { console.warn("불러오기 실패", e); return null; } }
+export function deleteSlot(n) { try { localStorage.removeItem(slotKey(n)); localStorage.removeItem(slotKey(n) + "-meta"); localStorage.removeItem(slotKey(n) + "-rev"); if (currentSlot() === n) localStorage.removeItem("pureday-fc-cur"); } catch (e) {} }
 export function freeSlot() { return SLOTS.find((n) => !slotMeta(n)) || 0; }
 // 예전 저장(pureday-fc-v3, 한 칸) → 1번 칸으로 옮김
 export async function migrateOld() { try { const s = localStorage.getItem("pureday-fc-v3"); if (s && !slotMeta(1)) { const S = JSON.parse(s); S.slot = 1; save(S); await saving; } if (s) localStorage.removeItem("pureday-fc-v3"); localStorage.removeItem("pureday-fc-v1"); } catch (e) {} }
 export async function flush() { await saving; }
+
+// ---------------------------------------------------------------- 클라우드 저장: 저장 코드(8자)로 서버에 올려 핸드폰·PC 어디서든 이어하기
+// S.cloud = { code, rev } — rev 는 이 기기가 마지막으로 올리거나 받은 판. 서버: worker/src/index.js 의 Save
+export const CLOUD = (globalThis.localStorage && localStorage.getItem("pureday-fc-cloud-dev")) || "https://pureday-fc.godpainter.workers.dev";   // 시험 땐 로컬 서버 주소를 넣음
+const CODE_A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const cloud = { state: "", at: 0, conflict: null, onChange: null };   // state: ""|"wait"|"up"|"ok"|"off"|"conflict"
+const setCloud = (st, extra = {}) => { Object.assign(cloud, { state: st }, extra); if (cloud.onChange) cloud.onChange(); };
+export const fmtCode = (c) => (c ? c.slice(0, 4) + "-" + c.slice(4) : "");
+export const cleanCode = (s) => { const c = String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return /^[A-HJ-NP-Z2-9]{8}$/.test(c) ? c : ""; };
+let upT = 0, upNext = null, upBusy = false;
+function cloudQueue(S, z, meta) { upNext = { S, z, meta }; setCloud("wait"); clearTimeout(upT); upT = setTimeout(cloudUpload, 3000); }
+async function cloudUpload(force) {
+  clearTimeout(upT); if (upBusy || !upNext) return; const { S, z, meta } = upNext; upNext = null; upBusy = true; setCloud("up");
+  try {
+    const r = await fetch(`${CLOUD}/save/${S.cloud.code}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ meta, data: z, base: force != null ? force : S.cloud.rev }) });
+    const j = await r.json();
+    if (r.status === 409) { upNext = upNext || { S, z, meta }; setCloud("conflict", { conflict: j.meta }); }
+    else if (!r.ok) throw new Error(j.error || r.status);
+    else { S.cloud.rev = j.meta.rev; patchRev(meta.slot, S.cloud); setCloud("ok", { at: j.meta.at }); }
+  } catch (e) { console.warn("클라우드 저장 실패", e); upNext = upNext || { S, z, meta }; setCloud("off"); upT = setTimeout(cloudUpload, 20000); }
+  upBusy = false; if (upNext && cloud.state !== "conflict" && cloud.state !== "off") cloudUpload();
+}
+// 올린 뒤 rev 가 바뀌었으니 이 칸의 저장 자료 속 S.cloud.rev 도 맞춰 둔다(다음에 열 때 충돌로 오해하지 않게)
+function patchRev(slot, c) { try { localStorage.setItem(slotKey(slot) + "-rev", JSON.stringify(c)); } catch (e) {} }
+export function cloudFlush() { if (upNext && !upBusy) cloudUpload(); }
+export function cloudPending() { return !!upNext || upBusy; }
+// 충돌 때: "mine" = 이 기기 기록으로 덮어쓰기, 그 밖엔 대기열만 비움
+export function cloudResolve(how) { if (how === "mine" && upNext && cloud.conflict) { const base = cloud.conflict.rev; setCloud("wait", { conflict: null }); cloudUpload(base); } else { upNext = null; setCloud("", { conflict: null }); } }
+// 클라우드 저장 켜기: 새 코드를 만들어 지금 커리어를 올린다
+export async function cloudEnable(S) {
+  for (let k = 0; k < 4; k++) {
+    let code = ""; const rnd = crypto.getRandomValues(new Uint8Array(8)); for (const x of rnd) code += CODE_A[x % 32];
+    const r = await fetch(`${CLOUD}/save/${code}?meta=1`); if (r.status !== 404) continue;
+    S.cloud = { code, rev: 0 }; save(S); await saving; clearTimeout(upT); await cloudUpload(); if (cloud.state === "ok") return code; clearTimeout(upT); upNext = null; S.cloud = null; setCloud(""); save(S); throw new Error("올리지 못했어요");
+  }
+  throw new Error("코드를 만들지 못했어요");
+}
+export function cloudDisable(S) { S.cloud = null; upNext = null; setCloud(""); save(S); }
+export async function cloudMeta(code) { const r = await fetch(`${CLOUD}/save/${code}?meta=1`); if (r.status === 404) return null; if (!r.ok) throw new Error("서버 " + r.status); return (await r.json()).meta; }
+// 코드로 받아 slot 칸에 넣고 커리어를 돌려준다
+export async function cloudLoad(code, slot) {
+  const r = await fetch(`${CLOUD}/save/${code}`); if (r.status === 404) return null; if (!r.ok) throw new Error("서버 " + r.status);
+  const { meta, data } = await r.json(); const S = JSON.parse(await ungz(data));
+  S.slot = slot; S.cloud = { code, rev: meta.rev }; ensureCups(S); upNext = null; setCloud("ok", { at: meta.at, conflict: null });
+  const z = await gz(JSON.stringify(slim(S))); localStorage.setItem(slotKey(slot), z);
+  localStorage.setItem(slotKey(slot) + "-meta", JSON.stringify({ ...meta, slot, cloud: code })); localStorage.setItem("pureday-fc-cur", String(slot)); patchRev(slot, S.cloud);
+  return S;
+}
 export function load() { return null; }
 export function wipe(n) { deleteSlot(n || 1); }
 export { ovr, marketValue, wageOf, money, COUNTRY };

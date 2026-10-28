@@ -119,3 +119,33 @@ tr.click{cursor:pointer} tr.click:active td{background:rgba(255,255,255,.08)}
 .toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.82);padding:9px 14px;border-radius:12px;font-size:13px;max-width:92%;text-align:center;z-index:40;pointer-events:none}
 .code{font-size:40px;font-weight:900;letter-spacing:8px;color:var(--gold);text-align:center;margin:8px 0}
 @media (min-width:700px){.ctrl{height:116px}}
+
+/* v7 컵 대회·시즌 엔딩 (2026-10-27) */
+.cupcard{border-color:rgba(138,180,255,.55);background:linear-gradient(160deg,#16294a,#14233a)}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.podium .pd{border-radius:10px;padding:8px 6px;background:rgba(255,255,255,.06);text-align:center;min-width:0}
+.podium .pd span{display:block;font-size:11px;color:var(--sub);font-weight:800}
+.podium .pd b{display:block;font-size:13px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium .p1{background:rgba(255,211,74,.16)}.podium .p1 b{color:var(--gold)}
+.podium .p2{background:rgba(214,221,232,.12)}.podium .p3{background:rgba(224,162,106,.14)}
+.podium .pd.me{outline:2px solid var(--gold)}
+.groups{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.groups table{font-size:12px;margin-top:2px}
+details summary{cursor:pointer;font-weight:800;font-size:13px;padding:6px 0}
+details table{margin-bottom:6px}
+.sheet.tall{max-height:96%}
+.ending .end-hero{border-radius:16px;padding:16px 14px;background:radial-gradient(circle at 50% 0,color-mix(in srgb,var(--c1) 45%,transparent),transparent 70%),linear-gradient(#10243d,#0d1b2c);border:1px solid var(--line);text-align:center}
+.ending .end-hero small{letter-spacing:5px;font-weight:900;color:var(--gold);font-size:11px}
+.ending .end-hero h2{font-size:24px;margin-top:4px}
+.ending .end-team{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px;text-align:left}
+.ending .end-team b{font-size:18px;display:block}
+.ending .end-team span{font-size:12px;color:var(--sub)}
+.ending .end-team em{font-style:normal;color:var(--gold);font-weight:900}
+.ending .end-tro{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.ending .end-tro span{background:rgba(255,211,74,.2);color:var(--gold);border-radius:999px;padding:5px 10px;font-weight:900;font-size:13px}
+.ending .end-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}
+.ending .end-chips span{background:rgba(255,255,255,.07);border-radius:999px;padding:4px 9px;font-size:12px}
+.ending .end-comp{margin-top:10px}
+.ending .end-comp h4{margin:0;font-size:14px}
+.end-tab{font-size:11px}
+.end-tab td{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

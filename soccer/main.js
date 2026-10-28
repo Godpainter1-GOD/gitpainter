@@ -1,9 +1,10 @@
 // 퓨어데이 FC — 화면(처음·창단·구단 운영·전술·이적시장·경기·온라인)
-import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, POS, POS_KO, FORMATIONS, TACTIC_ITEMS, PRESETS, DEFAULT_TACTIC, autoLineup, teamRating, slotsOf, ATTRS, AMIN, AMAX, migrateTactic } from "./data.js?v=6";
-import { buildRealWorld, loadReal, flagOf, COUNTRY } from "./realdata.js?v=6";
-import { Match, drawMatch, PW, PL } from "./engine.js?v=6";
-import * as C from "./career.js?v=6";
-import { connect, makeCode } from "./net.js?v=6";
+import { makeWorld, ovr, fitOvr, marketValue, wageOf, money, POS, POS_KO, FORMATIONS, TACTIC_ITEMS, PRESETS, DEFAULT_TACTIC, autoLineup, teamRating, slotsOf, ATTRS, AMIN, AMAX, migrateTactic } from "./data.js";
+import { buildRealWorld, loadReal, flagOf, COUNTRY } from "./realdata.js?v=8";
+import { Match, drawMatch, PW, PL } from "./engine.js";
+import * as C from "./career.js?v=8";
+import * as CUP from "./cups.js?v=8";
+import { connect, makeCode } from "./net.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -48,19 +49,21 @@ function title() {
   app.hidden = false; $("matchView").hidden = true;
   const me = S && C.club(S, C.MY);
   app.innerHTML = `<div class="title"><small>PUREDAY FOOTBALL</small><h1><b>퓨어데이</b> FC</h1>
-    <p>실제 리그 12개(K리그 1·2·3, 분데스리가 1·2·3, 잉글랜드 1·2·3, 라리가 1·2·3)의 트랜스퍼마켓 선수로 구단을 맡거나, 뉴팀을 창단해 <b>마이 팀</b>으로 키워요.</p></div>
+    <p>10개 나라 실제 리그(대한민국·독일·잉글랜드·스페인·프랑스·이탈리아·포르투갈·스코틀랜드·오스트리아·스위스)의 트랜스퍼마켓 선수로 구단을 맡거나, 뉴팀을 창단해 <b>마이 팀</b>으로 키워요. FA컵·리그컵·챔피언스리그·유럽연합리그 상금으로 운영비를 벌어요.</p></div>
     <div class="stack">
       ${S ? `<button class="big" id="bCont">▶ 커리어 이어하기<br><small style="font-weight:700">${esc(me.name)} · ${esc(C.myLeague(S).name)} · ${C.seasonLabel(S)}</small></button>` : ""}
       <button class="big ${S ? "alt" : ""}" id="bNew">🏟 새 커리어 (구단 맡기 / 뉴팀 창단)</button>
+      <button class="big alt" id="bCode">☁ 저장 코드로 불러오기 <small style="font-weight:700">(핸드폰·PC 이어하기)</small></button>
       <button class="big green" id="bOnline">🌐 친구와 온라인 대전</button>
       <button class="big alt" id="bFriendly">⚽ 친선 경기 (컴퓨터 / 둘이서)</button>
       <div class="card"><div class="lbl" style="margin-top:0">컴퓨터 실력</div><div class="seg" id="sDiff">${["쉬움", "보통", "어려움"].map((n, i) => `<button class="sm ${OPT.diff === i ? "on" : ""}" data-v="${i}">${n}</button>`).join("")}</div>
         <div class="lbl">경기 시간</div><div class="seg" id="sTime">${[[90, "3분"], [150, "5분"], [240, "8분"]].map(([v, n]) => `<button class="sm ${OPT.halfSec === v ? "on" : ""}" data-v="${v}">${n}</button>`).join("")}</div></div>
       <div class="row c"><button class="sm" id="bKeys">⌨ 키보드 설정</button><button class="sm" id="bHow">하는 방법</button></div>
-      <p class="sub" style="text-align:center">선수·구단·시장가치·FA 명단: transfermarkt.com (2026-10-25 기준). 개인 능력치는 시장가치·포지션·키·나이로 추정한 값이에요.</p>
+      <p class="sub" style="text-align:center">선수·구단·시장가치·FA 명단: transfermarkt.com (2026-10-25·27 기준). 개인 능력치는 시장가치·포지션·키·나이로 추정한 값이에요.</p>
     </div>`;
   if (S) $("bCont").onclick = () => (C.SLOTS.filter((n) => C.slotMeta(n)).length > 1 ? slotPicker("load") : hub());
   $("bNew").onclick = () => slotPicker("new");
+  $("bCode").onclick = () => codeLoad();
   $("bFriendly").onclick = friendly; $("bOnline").onclick = online; $("bHow").onclick = how; $("bKeys").onclick = () => keySettings();
   $("sDiff").querySelectorAll("button").forEach((b) => (b.onclick = () => { OPT.diff = +b.dataset.v; saveOpt(); title(); }));
   $("sTime").querySelectorAll("button").forEach((b) => (b.onclick = () => { OPT.halfSec = +b.dataset.v; saveOpt(); title(); }));
@@ -106,7 +109,7 @@ function confirmNew() { slotPicker("new"); }
 function slotPicker(mode) {
   const rows = C.SLOTS.map((n) => { const m = C.slotMeta(n); return { n, m }; });
   modal(`<h2>${mode === "new" ? "새 커리어를 어느 칸에 만들까요?" : "어느 커리어를 이어할까요?"}</h2><p class="sub">저장 칸은 3개예요. 칸마다 다른 팀을 키울 수 있어요.</p>
-    ${rows.map(({ n, m }) => `<div class="card" style="margin-top:8px"><div class="row" style="justify-content:space-between"><div><b>${n}번 칸</b> ${m ? `· ${esc(m.name)}<br><span class="sub">${esc(m.league)} · ${m.season} · ${C.PHASE_KO[m.phase] || ""} · ${new Date(m.saved).toLocaleString("ko-KR")}</span>` : `<span class="sub">비어 있음</span>`}</div>
+    ${rows.map(({ n, m }) => `<div class="card" style="margin-top:8px"><div class="row" style="justify-content:space-between"><div><b>${n}번 칸</b> ${m ? `· ${esc(m.name)}<br><span class="sub">${esc(m.league)} · ${m.season} · ${C.PHASE_KO[m.phase] || ""} · ${new Date(m.saved).toLocaleString("ko-KR")}${m.cloud ? ` · ☁ ${C.fmtCode(m.cloud)}` : ""}</span>` : `<span class="sub">비어 있음</span>`}</div>
       <div class="row">${mode === "load" ? (m ? `<button class="sm on" data-ld="${n}">이어하기</button>` : "") : `<button class="sm ${m ? "red" : "on"}" data-nw="${n}">${m ? "지우고 새로" : "여기에 만들기"}</button>`}${m ? `<button class="sm red" data-del="${n}">삭제</button>` : ""}</div></div></div>`).join("")}
     <button class="sm" id="spX" style="margin-top:10px">닫기</button>`);
   $("modal").querySelectorAll("[data-ld]").forEach((b) => (b.onclick = async () => { closeModal(); const L = await C.loadSlot(+b.dataset.ld); if (L) { S = L; localStorage.setItem("pureday-fc-cur", String(S.slot)); tab = "home"; hub(); } else toast("불러오지 못했어요"); }));
@@ -120,6 +123,102 @@ function slotPicker(mode) {
     $("yy").onclick = () => { C.deleteSlot(n); if (S && S.slot === n) S = null; toast(`${n}번 칸을 지웠어요`); slotPicker(mode); title(); slotPicker(mode); }; $("nn").onclick = () => slotPicker(mode); }));
   $("spX").onclick = closeModal;
 }
+// ---------------------------------------------------------------- ☁ 클라우드 저장(저장 코드로 핸드폰·PC 이어하기)
+const ago = (t) => { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? "방금" : s < 3600 ? `${Math.floor(s / 60)}분 전` : new Date(t).toLocaleString("ko-KR"); };
+function cloudChip() {
+  if (!S || !S.cloud) return "";
+  const st = C.cloud.state;
+  return st === "wait" || st === "up" ? "☁ 올리는 중…" : st === "off" ? "☁ 인터넷 연결 대기" : st === "conflict" ? "☁ 확인 필요" : "☁ 클라우드 저장됨";
+}
+function cloudCard() {
+  if (!S.cloud) return `<h3>☁ 클라우드 저장 (핸드폰·PC 이어하기)</h3><p class="sub">지금은 이 기기(이 브라우저)에만 저장돼요. 켜면 <b>저장 코드</b>가 생기고, 저장할 때마다 자동으로 클라우드에도 올라가요. 다른 기기에서는 처음 화면 「☁ 저장 코드로 불러오기」에 코드를 넣으면 이어서 해요.</p>
+    <button class="big" id="cOn" style="width:100%;margin-top:10px">☁ 클라우드 저장 켜기</button>`;
+  const st = C.cloud.state;
+  return `<h3>☁ 클라우드 저장 켜짐</h3><div class="lbl" style="margin-top:0">저장 코드</div>
+    <div class="row" style="justify-content:space-between"><b style="font-size:28px;letter-spacing:3px">${C.fmtCode(S.cloud.code)}</b><button class="sm on" id="cCopy">코드 복사</button></div>
+    <p class="sub">${st === "wait" || st === "up" ? "올리는 중…" : st === "off" ? "인터넷이 끊겨 잠시 뒤 다시 올려요." : st === "conflict" ? "다른 기기에서 더 진행한 기록이 있어요." : C.cloud.at ? `마지막으로 올린 때: ${ago(C.cloud.at)}` : "저장할 때마다 자동으로 올라가요."}</p>
+    <p class="sub">이 코드를 아는 사람은 이 커리어를 불러올 수 있어요. 사진으로 찍거나 메모해 두세요.</p>
+    <div class="row" style="margin-top:8px"><button class="sm" id="cNow">지금 올리기</button><button class="sm red" id="cOff">이 기기에서 연결 끊기</button></div>`;
+}
+function bindCloudCard() {
+  if (!$("cloudCard")) return;
+  if ($("cOn")) $("cOn").onclick = async () => { $("cOn").disabled = true; $("cOn").textContent = "코드를 만드는 중…";
+    try { const code = await C.cloudEnable(S); hub(); showCode(code); } catch (e) { console.warn(e); toast("클라우드에 올리지 못했어요. 인터넷 연결을 확인해 주세요", 3500); hub(); } };
+  if ($("cCopy")) $("cCopy").onclick = () => copyCode(S.cloud.code);
+  if ($("cNow")) $("cNow").onclick = async () => { persist(); await C.flush(); C.cloudFlush(); toast("클라우드에 올리는 중…"); };
+  if ($("cOff")) $("cOff").onclick = () => { modal(`<h2>이 기기에서 클라우드 연결을 끊을까요?</h2><p class="sub">이 기기의 커리어는 그대로 남고, 앞으로는 이 기기에만 저장돼요. 클라우드에 올린 기록(${C.fmtCode(S.cloud.code)})은 지워지지 않아서 다른 기기에서는 계속 불러올 수 있어요.</p><div class="row" style="margin-top:12px"><button class="big" id="yy">연결 끊기</button><button class="sm" id="nn">취소</button></div>`);
+    $("yy").onclick = () => { C.cloudDisable(S); closeModal(); hub(); toast("연결을 끊었어요"); }; $("nn").onclick = closeModal; };
+}
+async function copyCode(code) { try { await navigator.clipboard.writeText(C.fmtCode(code)); toast("코드를 복사했어요"); } catch (e) { toast(C.fmtCode(code), 4000); } }
+function showCode(code) {
+  modal(`<h2>☁ 클라우드 저장을 켰어요</h2><p class="sub">다른 기기(핸드폰·PC)에서 퓨어데이 FC를 열고 처음 화면 「☁ 저장 코드로 불러오기」에 이 코드를 넣으세요.</p>
+    <div style="text-align:center;margin:18px 0"><b style="font-size:40px;letter-spacing:5px">${C.fmtCode(code)}</b></div>
+    <p class="sub">코드는 ⚙ 설정에서 언제든 다시 볼 수 있어요. 사진으로 찍어 두면 편해요.</p>
+    <div class="row" style="margin-top:12px"><button class="big" id="scCopy">코드 복사</button><button class="sm" id="scOk">확인</button></div>`);
+  $("scCopy").onclick = () => copyCode(code);
+  $("scOk").onclick = closeModal;
+}
+// 처음 화면: 코드 넣기 → 서버에서 확인 → 넣을 칸 고르기 → 불러오기
+function codeLoad() {
+  modal(`<h2>☁ 저장 코드로 불러오기</h2><p class="sub">다른 기기의 ⚙ 설정에 있는 8자리 저장 코드를 넣으세요. (예: K7PM-3QXA)</p>
+    <input type="text" id="clCode" maxlength="12" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" style="font-size:26px;letter-spacing:3px;text-align:center;text-transform:uppercase;margin-top:10px">
+    <p class="sub" id="clMsg" style="min-height:1.4em"></p>
+    <div class="row" style="margin-top:8px"><button class="big" id="clGo">확인</button><button class="sm" id="clX">닫기</button></div>`);
+  $("clCode").focus();
+  $("clX").onclick = closeModal;
+  const go = async () => { const code = C.cleanCode($("clCode").value);
+    if (!code) { $("clMsg").textContent = "코드는 영문·숫자 8자리예요 (0·1·I·O 는 쓰지 않아요)."; return; }
+    $("clMsg").textContent = "찾는 중…"; $("clGo").disabled = true;
+    let m = null; try { m = await C.cloudMeta(code); } catch (e) { $("clMsg").textContent = "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."; $("clGo").disabled = false; return; }
+    if (!m) { $("clMsg").textContent = "이 코드로 저장된 커리어가 없어요. 다시 확인해 주세요."; $("clGo").disabled = false; return; }
+    pickCloudSlot(code, m); };
+  $("clGo").onclick = go; $("clCode").onkeydown = (e) => { if (e.key === "Enter") go(); };
+}
+function pickCloudSlot(code, m) {
+  const same = C.SLOTS.find((n) => (C.slotMeta(n) || {}).cloud === code);
+  const rows = C.SLOTS.map((n) => ({ n, s: C.slotMeta(n) }));
+  modal(`<h2>${esc(m.name)}</h2><p class="sub">${esc(m.league)} · ${m.season} · ${C.PHASE_KO[m.phase] || ""} · 마지막 저장 ${ago(m.at)}</p>
+    <div class="lbl">이 기기의 어느 칸에 넣을까요?</div>
+    ${rows.map(({ n, s }) => `<div class="card" style="margin-top:8px"><div class="row" style="justify-content:space-between"><div><b>${n}번 칸</b> ${s ? `· ${esc(s.name)}${s.cloud === code ? " (같은 코드)" : ""}` : `<span class="sub">비어 있음</span>`}</div>
+      <button class="sm ${!s || n === same ? "on" : "red"}" data-cs="${n}">${!s ? "여기에 넣기" : n === same ? "새 기록으로 바꾸기" : "지우고 넣기"}</button></div></div>`).join("")}
+    <button class="sm" id="csX" style="margin-top:10px">취소</button>`);
+  $("csX").onclick = closeModal;
+  $("modal").querySelectorAll("[data-cs]").forEach((b) => (b.onclick = async () => { const n = +b.dataset.cs; b.disabled = true; b.textContent = "불러오는 중…";
+    try { await C.flush(); const L = await C.cloudLoad(code, n); if (!L) throw new Error("none"); S = L; closeModal(); tab = "home"; hub(); toast(`${C.club(S, C.MY).name} 커리어를 이어서 해요 ☁`, 3000); }
+    catch (e) { console.warn(e); toast("불러오지 못했어요. 다시 해 주세요", 3000); closeModal(); } }));
+}
+// 다른 기기에서 더 진행했는지 확인(시작할 때·이 화면으로 돌아올 때)
+let checking = false;
+async function cloudCheck() {
+  if (!S || !S.cloud || checking || !$("modal").hidden || !$("matchView").hidden) return;
+  if (C.cloud.state === "conflict" && C.cloud.conflict) return cloudNewer(C.cloud.conflict, true);   // 경기 중에 막혔던 것
+  if (C.cloudPending()) return;
+  checking = true;
+  try { const m = await C.cloudMeta(S.cloud.code); if (m && m.rev > S.cloud.rev && $("modal").hidden) cloudNewer(m, false); } catch (e) {}
+  checking = false;
+}
+// mine = 이 기기에서 올리려다 막힌 경우(덮어쓰기도 고를 수 있게)
+function cloudNewer(m, mine) {
+  modal(`<h2>☁ 다른 기기에서 더 진행한 기록이 있어요</h2>
+    <div class="card" style="margin-top:8px"><b>클라우드 기록</b><br><span class="sub">${esc(m.name)} · ${m.season} · ${C.PHASE_KO[m.phase] || ""} · ${ago(m.at)} 저장</span></div>
+    <div class="card" style="margin-top:8px"><b>이 기기 기록</b><br><span class="sub">${esc(C.club(S, C.MY).name)} · ${C.seasonLabel(S)} · ${C.PHASE_KO[S.phase] || ""}</span></div>
+    <div class="stack" style="margin-top:12px"><button class="big" id="cnLoad">☁ 클라우드 기록으로 이어하기 (추천)</button>
+    ${mine ? `<button class="sm red" id="cnMine">이 기기 기록으로 클라우드를 덮어쓰기</button>` : `<button class="sm" id="cnLater">나중에</button>`}</div>`);
+  $("modal").onclick = null;   // 바깥을 눌러 닫지 않게
+  $("cnLoad").onclick = async () => { $("cnLoad").disabled = true; $("cnLoad").textContent = "불러오는 중…"; C.cloudResolve("drop");
+    try { await C.flush(); const L = await C.cloudLoad(S.cloud.code, S.slot || 1); if (L) { S = L; tab = "home"; } toast("클라우드 기록으로 이어서 해요 ☁", 3000); } catch (e) { toast("불러오지 못했어요", 3000); }
+    closeModal(); if ($("matchView").hidden) (app.querySelector(".title") ? title() : hub()); };
+  if (mine) $("cnMine").onclick = () => { C.cloudResolve("mine"); closeModal(); toast("이 기기 기록으로 올려요"); };
+  else $("cnLater").onclick = closeModal;
+}
+C.cloud.onChange = () => {
+  const ch = $("cloudChip"); if (ch) ch.textContent = cloudChip();
+  if (C.cloud.state === "ok" && $("cloudCard") && !$("cOn")) { $("cloudCard").innerHTML = cloudCard(); bindCloudCard(); }
+  if (C.cloud.state === "conflict" && C.cloud.conflict && S && S.cloud && $("matchView").hidden) cloudNewer(C.cloud.conflict, true);
+};
+document.addEventListener("visibilitychange", () => { if (document.hidden) C.cloudFlush(); else cloudCheck(); });
+window.addEventListener("pagehide", () => C.cloudFlush());
+
 function how() {
   modal(`<h2>하는 방법</h2>
     <div class="msg"><b>경기 조작(폰)</b> — 아래 왼쪽 칸을 누르고 끌면 노란 고리 선수가 움직여요. <b>패스</b>: 바라보는 쪽 동료에게(공이 없으면 선수 바꾸기), <b>슛</b>: 상대 골로(공이 없으면 태클), <b>질주</b>: 누르고 있는 동안 빨리.</div>
@@ -127,6 +226,7 @@ function how() {
     <div class="msg"><b>수비</b> — 공이 없을 때 패스 = <b>몸태클</b>(어깨로 밀어 뺏기, 피지컬이 중요), 슛 = <b>다리태클</b>(바라보는 쪽으로 슬라이딩, 공보다 사람을 먼저 치면 반칙 → 프리킥, 박스 안이면 페널티킥).</div>
     <div class="msg"><b>능력치</b> — 50~120. 스피드·슈팅·패스·드리블·수비·피지컬·헤딩·전술지능·체력·골키퍼 10가지가 경기에 반영돼요(체력이 낮으면 후반에 느려지고, 헤딩은 공중볼·헤딩슛, 전술지능은 자리 잡기·판단). 선수 창의 「✏ 능력치 편집」으로 바꿀 수 있어요.</div>
     <div class="msg"><b>커리어</b> — 실제 리그 구단을 맡거나, 원하는 리그에서 뉴팀을 창단해요(뉴팀은 그 리그보다 조금 낮은 선수 20명으로 시작). 이적시장은 여름(시즌 전)·겨울(9라운드 뒤)·FA(시즌 끝)에 5일씩 열려요. 다른 구단 선수에게 이적료를 제안하거나 내 선수를 얹어 <b>트레이드</b>하고, 내 선수를 이적 명단에 올리면 제안이 와요. 주급은 2주마다, 홈 경기 수입·승리 수당·시즌 상금·스폰서로 운영비가 들어와요.</div>
+    <div class="msg"><b>컵 대회·상금</b> — 시즌마다 나라별 <b>FA컵</b>(모든 리그)·<b>리그컵</b>(1·2부), 5대 리그 상위권은 <b>챔피언스리그</b>, 포르투갈·스코틀랜드·오스트리아·스위스 1~3위는 <b>유럽연합리그</b>(조별리그 → 토너먼트). 예선·조별리그·토너먼트 승리마다 수당, 우승·준우승·3위 상금이 운영비로 들어와요. 리그도 1~3위 상금과 득점왕·도움왕 상금이 있어요. 컵 경기는 리그 라운드 사이에 끼어 있고, 직접 뛰거나 빠른 결과로 치러요(단판은 비기면 승부차기). 시즌이 끝나면 <b>시즌 엔딩</b>에서 우승팀·득점왕·컵 대회 결과를 한눈에 보고 엔딩샷 그림으로 저장할 수 있어요.</div>
     <div class="msg"><b>전술</b> — 포메이션 6가지, 공격 성향·압박·폭·패스 방식이 경기 움직임과 빠른 결과 모두에 반영돼요.</div>
     <button class="big" id="mOk" style="margin-top:12px;width:100%">알겠어요</button>`);
   $("mOk").onclick = closeModal;
@@ -179,13 +279,13 @@ function createTeam(o) {
 function hub() {
   app.hidden = false; $("matchView").hidden = true;
   const me = C.club(S, C.MY);
-  const tabs = [["home", "홈"], ["squad", "선수단"], ["tactic", "전술"], ["market", "이적시장"], ["table", "리그"], ["records", "기록"], ["news", "소식·재정"], ["edit", "⚙ 설정"]];
+  const tabs = [["home", "홈"], ["squad", "선수단"], ["tactic", "전술"], ["market", "이적시장"], ["table", "리그"], ["cups", "🏆 컵 대회"], ["records", "기록"], ["news", "소식·재정"], ["edit", "⚙ 설정"]];
   app.innerHTML = `<div class="hub-top">${badge(me)}<div class="nm"><b>${esc(me.name)}<span class="tag">MY TEAM</span></b><span class="sub">${esc(C.myLeague(S).name)} · ${C.seasonLabel(S)} · 종합 ${C.rating(S, C.MY)} · 평판 ${Math.round(me.rep)}${me.coach ? ` · 감독 ${esc(me.coach)}` : ""}${me.stadium ? ` · ${esc(me.stadium)}` : ""}</span></div>
-      <div class="money"><span class="sub">운영비</span><b>${money(me.budget)}</b></div></div>
+      <div class="money"><span class="sub">운영비</span><b>${money(me.budget)}</b><span class="sub" id="cloudChip">${cloudChip()}</span></div></div>
     <div class="tabs">${tabs.map(([k, n]) => `<button class="${tab === k ? "on" : ""}" data-t="${k}">${n}${k === "market" && S.offers.length ? ` (${S.offers.length})` : ""}</button>`).join("")}</div>
     <div id="tabBody"></div>`;
   app.querySelectorAll(".tabs button").forEach((b) => (b.onclick = () => { tab = b.dataset.t; hub(); }));
-  ({ home: tabHome, squad: tabSquad, tactic: tabTactic, market: tabMarket, table: tabTable, records: tabRecords, news: tabNews, edit: tabEdit })[tab]($("tabBody"));
+  ({ home: tabHome, squad: tabSquad, tactic: tabTactic, market: tabMarket, table: tabTable, cups: tabCups, records: tabRecords, news: tabNews, edit: tabEdit })[tab]($("tabBody"));
 }
 function phaseBox() {
   const w = C.windowOpen(S);
@@ -196,10 +296,10 @@ function bindDay() { const b = $("bDay"); if (b) b.onclick = () => { const was =
 function tabHome(el) {
   let f = C.nextFixture(S);
   let next = "";
-  if (f && f.bye) { next = `<div class="card"><h3>이번 라운드는 쉬어요</h3><button class="big alt" id="bSim" style="width:100%">⏩ 다음 라운드로</button></div>`; }
+  if (f && f.bye) { next = `<div class="card"><h3>${esc(f.label || "")} — 이번 라운드는 쉬어요</h3><button class="big alt" id="bSim" style="width:100%">⏩ 다음 라운드로</button></div>`; }
   else if (f) {
     const h = C.club(S, f.h), a = C.club(S, f.a);
-    next = `<div class="card"><h3>다음 경기 · ${S.md + 1}라운드 ${f.h === C.MY ? "(홈)" : "(원정)"}</h3>
+    next = `<div class="card${f.cup ? " cupcard" : ""}"><h3>다음 경기 · ${esc(f.label || "")} ${f.neutral ? "(중립 경기장)" : f.h === C.MY ? "(홈)" : "(원정)"}</h3>${f.ko ? `<p class="sub">단판 승부 — 비기면 승부차기로 다음 라운드 진출 팀을 정해요.</p>` : ""}
       <div class="vs"><div class="t">${badge(h)}<b>${esc(h.name)}</b><span class="sub">종합 ${C.rating(S, h.id)}</span></div><div class="x">VS</div><div class="t">${badge(a)}<b>${esc(a.name)}</b><span class="sub">종합 ${C.rating(S, a.id)}</span></div></div>
       <div class="row c" style="margin-top:8px"><button class="big" id="bPlay">⚽ 직접 뛰기</button><button class="big alt" id="bSim">⏩ 빠른 결과</button></div></div>`;
   }
@@ -214,26 +314,33 @@ function tabHome(el) {
       <div class="row c" style="margin-top:8px"><button class="big" id="bSdPlay">⭐ 직접 뛰기 (${mineTop ? "상위" : "하위"} 올스타 조종)</button><button class="big alt" id="bSdSim">⏩ 빠른 결과</button></div></div>`;
   }
   const tb = C.standings(S), myRank = tb.findIndex((r) => r.c.id === C.MY) + 1, myT = C.myLeague(S).table[C.MY];
-  el.innerHTML = phaseBox() + sdCard + next + offers +
+  const myComps = (S.comps || []).filter((c) => c.myIn);
+  const cupCard = myComps.length ? `<div class="card"><h3>🏆 이번 시즌 컵 대회</h3>${myComps.map((c) => `<div class="kv"><span>${c.icon} ${esc(c.name)}</span><b>${esc(CUP.compStatus(S, c))}</b></div>`).join("")}</div>` : "";
+  const endBtn = S.endings && S.endings.length && C.windowOpen(S) && S.endings[0].season !== C.seasonLabel(S) ? `<button class="big alt" id="bEnding" style="width:100%;margin-top:10px">🎬 ${S.endings[0].season} 시즌 엔딩 다시 보기</button>` : "";
+  el.innerHTML = phaseBox() + endBtn + sdCard + next + cupCard + offers +
     `<div class="card"><h3>시즌 현황</h3><div class="kv"><span>순위</span><b>${myRank}위 / ${tb.length}</b></div><div class="kv"><span>승점</span><b>${myT.pts} (${myT.w}승 ${myT.d}무 ${myT.l}패)</b></div>
       <div class="kv"><span>선수단</span><b>${C.squad(S, C.MY).length}명 · 주급 합계 ${money(C.payroll(S, C.MY))}</b></div>
       ${S.history.length ? `<div class="kv"><span>지난 시즌</span><b>${esc(S.history[0].league)} ${S.history[0].myRank}위${S.history[0].move === "up" ? " ⬆ 승격" : S.history[0].move === "down" ? " ⬇ 강등" : ""}</b></div>` : ""}</div>
     <div class="card"><h3>최근 소식</h3>${S.news.slice(0, 5).map((n) => `<div class="newsl ${n.kind}">${esc(n.text)}</div>`).join("")}</div>
     <div class="row c" style="margin-top:12px"><button class="sm" id="bHome">처음 화면</button></div>`;
   bindDay(); bindOffers();
+  if ($("bEnding")) $("bEnding").onclick = () => endingView(S.endings[0]);
   if ($("bSdPlay")) { $("bSdPlay").onclick = playSuperday; $("bSdSim").onclick = () => { const [A, B] = C.superdayTeams(S); const ra = A.players.reduce((s2, p) => s2 + ovr(p), 0) / 11, rb = B.players.reduce((s2, p) => s2 + ovr(p), 0) / 11; const sc = quickSimLocal(ra, rb); const pool = (sc[0] >= sc[1] ? A : B).players.filter((p) => p.pos !== "GK"); const mvp = pool[Math.floor(Math.random() * pool.length)]; C.finishSuperday(S, sc, mvp ? mvp.name : ""); persist(); hub(); toast(`⭐ 슈퍼데이 ${sc[0]} : ${sc[1]} · MVP ${mvp ? mvp.name : "-"}`, 3500); }; }
   if (f) { if ($("bPlay")) $("bPlay").onclick = () => playCareerMatch(); $("bSim").onclick = () => { const res = C.playMatchday(S); persist(); showResults(res); }; }
   $("bHome").onclick = title;
 }
 function showResults(R, myLine) {
   if (!R) return hub(); const res = R.results || [], L = C.league(S, R.league) || C.myLeague(S);
-  const rows = res.map((r) => { const h = C.club(S, r.h), a = C.club(S, r.a); return `<tr class="${r.mine ? "me" : ""}"><td>${esc(h.name)}</td><td class="n"><b>${r.score[0]} : ${r.score[1]}</b></td><td>${esc(a.name)}</td></tr>`; }).join("");
-  const mine = res.find((r) => r.mine), motm = mine && mine.motm ? `<div class="msg">🏅 경기 최우수 선수: <b>${esc(mine.motm.name)}</b> (평점 ${mine.motm.rat})</div>` : "";
-  const h0 = S.history[0];
-  modal(`<h2>${esc(L.name)} ${L.played || L.fixtures.length}라운드 결과</h2>${myLine ? `<div class="msg ok">${myLine}</div>` : ""}${motm}<table style="margin-top:8px">${rows}</table>
-    ${S.phase === "winter" ? `<div class="msg ct">❄ 겨울 이적시장이 열렸어요!</div>` : S.phase === "fa" && h0 && h0.season !== C.seasonLabel(S) ? `<div class="msg ct">🏆 시즌 끝 — ${esc(h0.champion)} 우승, 우리 팀 ${h0.myRank}위${h0.move === "up" ? " 🎉 승격!" : h0.move === "down" ? " (강등)" : ""}. FA 이적시장이 열렸어요.</div>` : ""}
-    <button class="big" id="mOk" style="width:100%;margin-top:12px">확인</button>`);
-  $("mOk").onclick = () => { closeModal(); hub(); };
+  const nm = (id) => esc(C.club(S, id).name), mine = res.find((r) => r.mine);
+  const rows = res.slice().sort((a, b) => b.mine - a.mine).slice(0, 40).map((r) => `<tr class="${r.mine ? "me" : ""}"><td>${r.tag === "third" ? `<span class="sub">3·4위전</span><br>` : r.tag === "final" ? `<span class="sub">결승</span><br>` : r.g ? `<span class="sub">${r.g}조</span> ` : ""}${nm(r.h)}</td><td class="n"><b>${r.score[0]} : ${r.score[1]}</b>${r.pens ? `<br><span class="sub">승부차기 ${r.pens[0]}:${r.pens[1]}</span>` : ""}</td><td>${nm(r.a)}</td></tr>`).join("");
+  const motm = mine && mine.motm ? `<div class="msg">🏅 경기 최우수 선수: <b>${esc(mine.motm.name)}</b> (평점 ${mine.motm.rat})</div>` : "";
+  const pk = mine && mine.pens ? `<div class="msg ${mine.win === C.MY ? "ok" : "no"}">🥅 승부차기 ${mine.h === C.MY ? mine.pens[0] : mine.pens[1]} : ${mine.h === C.MY ? mine.pens[1] : mine.pens[0]} — ${mine.win === C.MY ? "다음 라운드 진출!" : "탈락…"}</div>` : "";
+  const ending = S.endingNew && S.endings && S.endings[0];
+  modal(`<h2>${esc(R.title || `${L.name} ${L.played || L.fixtures.length}라운드 결과`)}</h2>${myLine ? `<div class="msg ok">${myLine}</div>` : ""}${pk}${motm}<table style="margin-top:8px">${rows}</table>
+    ${S.phase === "winter" ? `<div class="msg ct">❄ 겨울 이적시장이 열렸어요!</div>` : ""}
+    ${ending ? `<div class="msg ct">🏆 ${esc(ending.season)} 시즌 끝 — 우리 팀 ${esc(ending.my.league)} ${ending.my.rank}위${ending.my.move === "up" ? " 🎉 승격!" : ending.my.move === "down" ? " (강등)" : ""}. FA 이적시장이 열렸어요.</div>` : ""}
+    <button class="big" id="mOk" style="width:100%;margin-top:12px">${ending ? "🎬 시즌 엔딩 보기" : "확인"}</button>`);
+  $("mOk").onclick = () => { closeModal(); hub(); if (ending) { S.endingNew = false; persist(); endingView(ending); } };
 }
 function offersHTML() {
   return S.offers.map((o, k) => { const p = C.player(S, o.pid), c = C.club(S, o.from); return p ? `<div class="offer"><span>${esc(c.name)} → <b>${esc(p.name)}</b> ${money(o.fee)}<br><span class="sub">시장 가치 ${money(marketValue(p))}</span></span><span class="row"><button class="sm green" data-acc="${k}">수락</button><button class="sm red" data-dec="${k}">거절</button></span></div>` : ""; }).join("");
@@ -441,8 +548,10 @@ function tabRecords(el) {
     ${board("rat", "⭐ 평균 평점 (MVP 경쟁)", (v) => v.toFixed(2))}${board("motm", "🏅 경기 최우수 선수(MOTM) 횟수", (v) => `${v}회`)}
     ${board("cs", "🧤 클린시트 (골키퍼상 경쟁)", (v, p) => `${v}회 · 평점 ${C.avgRat(p).toFixed(2)}`)}${board("yc", "🟨 경고", (v, p) => `${v}장${p.st.rc ? ` · 퇴장 ${p.st.rc}` : ""}`)}
     <div class="card"><h3>🏆 시즌 시상 기록</h3>${(S.awards || []).map((a) => `<div class="msg"><b>${a.season} ${esc(a.league)}</b><br>올해의 선수 ${a.poy ? `${esc(a.poy.name)} (${esc(a.poy.club)}, ${a.poy.extra})` : "-"}<br>MVP ${a.mvp ? `${esc(a.mvp.name)} (${a.mvp.extra})` : "-"} · 득점왕 ${a.scorer ? `${esc(a.scorer.name)} ${a.scorer.extra}` : "-"} · 도움왕 ${a.assist ? `${esc(a.assist.name)} ${a.assist.extra}` : "-"} · 골키퍼상 ${a.gk ? `${esc(a.gk.name)} ${a.gk.extra}` : "-"}</div>`).join("") || `<p class="sub">시즌이 끝나면 우리 리그 시상(올해의 선수·MVP·득점왕·도움왕·골키퍼상)이 여기에 남아요.</p>`}</div>
+    <div class="card"><h3>🎬 시즌 엔딩</h3>${(S.endings || []).map((e, i) => `<div class="kv"><span>${e.season} · ${esc(e.my.league)} ${e.my.rank}위${e.my.trophies.length ? ` · 🏆 ${e.my.trophies.length}` : ""}</span><button class="sm on" data-end="${i}">보기</button></div>`).join("") || `<p class="sub">시즌이 끝나면 득점왕·우승팀·컵 대회 우승·준우승을 한눈에 보는 엔딩이 여기에 남아요.</p>`}</div>
     <div class="card"><h3>⭐ 슈퍼데이 기록</h3>${(S.superdays || []).map((d) => `<div class="kv"><span>${d.season} ${esc(d.league)} · MVP ${esc(d.mvp || "-")}</span><b>상위 ${d.score[0]} : ${d.score[1]} 하위</b></div>`).join("") || `<p class="sub">시즌 중간(겨울 이적시장)에 열려요.</p>`}</div>`;
   $("rSel").onchange = (e) => { recLeague = e.target.value; hub(); };
+  el.querySelectorAll("[data-end]").forEach((x) => (x.onclick = () => endingView(S.endings[+x.dataset.end])));
 }
 // ---------------------------------------------------------------- ⚙ 설정(구단 기본·저장 칸)
 function tabEdit(el) {
@@ -455,6 +564,7 @@ function tabEdit(el) {
       <div class="lbl">유니폼 색 (주 색 · 테두리 색)</div><div class="row"><input type="color" id="eC1" value="${c.c1}"><input type="color" id="eC2" value="${c.c2}"><span id="ePrev">${badge(c)}</span></div>
       <div class="swatches" style="margin-top:8px">${KITS.map((k, i) => `<button class="sw" data-k="${i}" style="background:${k[0]}"><i style="background:${k[1]}"></i></button>`).join("")}</div>
       <button class="big" id="eSave" style="width:100%;margin-top:12px">저장</button></div>
+    <div class="card" id="cloudCard">${cloudCard()}</div>
     <div class="card"><h3>저장 칸</h3><p class="sub">지금 커리어는 ${S.slot || 1}번 칸이에요. 칸마다 다른 팀을 키울 수 있어요.</p>
       <div class="row" style="margin-top:8px"><button class="sm on" id="eSlots">칸 보기 · 바꾸기 · 지우기</button><button class="sm" id="eNew">새 커리어(빈 칸에)</button></div></div>
     <div class="card"><h3>이 커리어 지우기</h3><p class="sub">${esc(c.name)} 커리어(${S.slot || 1}번 칸)를 완전히 지우고 처음 화면으로 가요. 되돌릴 수 없어요.</p><button class="sm red" id="eDel" style="margin-top:8px">🗑 이 커리어 지우기</button></div>`;
@@ -463,10 +573,127 @@ function tabEdit(el) {
   el.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => { $("eC1").value = KITS[+b.dataset.k][0]; $("eC2").value = KITS[+b.dataset.k][1]; prev(); }));
   $("eSave").onclick = () => { C.editClub(S, { name: $("eName").value.trim(), short: $("eShort").value.trim(), coach: $("eCoach").value.trim(), stadium: $("eStad").value.trim(), c1: $("eC1").value, c2: $("eC2").value }); persist(); hub(); toast("구단 설정을 저장했어요"); };
   $("eSlots").onclick = () => slotPicker("load");
+  bindCloudCard();
   $("eNew").onclick = () => slotPicker("new");
   $("eDel").onclick = () => { modal(`<h2>${esc(c.name)} 커리어를 지울까요?</h2><p class="sub">${S.slot || 1}번 칸이 비워져요. 되돌릴 수 없어요.</p><div class="row" style="margin-top:12px"><button class="big" id="yy">지우기</button><button class="sm" id="nn">취소</button></div>`);
     $("yy").onclick = async () => { await C.flush(); C.deleteSlot(S.slot || 1); S = null; closeModal(); title(); toast("커리어를 지웠어요"); }; $("nn").onclick = closeModal; };
 }
+
+// ---------------------------------------------------------------- 컵 대회(FA컵·리그컵·챔피언스리그·유럽연합리그)
+let viewComp = null;
+const M = (v) => money(Math.round(v / 1e4) * 1e4);
+function prizeHTML(c) {
+  if (!c) return "";
+  if (c.kind === "cl" || c.kind === "eul") { const P = CUP.EURO_P[c.kind]; return `<div class="kv"><span>예선 승리 수당</span><b>${M(P.q)}</b></div><div class="kv"><span>본선(조별리그) 참가금</span><b>${M(P.join)}</b></div><div class="kv"><span>조별리그 승리 / 무승부 수당</span><b>${M(P.gw)} / ${M(P.gd)}</b></div><div class="kv"><span>토너먼트 진출 수당</span><b>${M(P.adv)}</b></div>${Object.entries(P.ko).sort((a, b) => b[0] - a[0]).map(([n, v]) => `<div class="kv"><span>${n === "4" ? "4강" : n === "8" ? "8강" : "16강"} 승리 수당</span><b>${M(v)}</b></div>`).join("")}<div class="kv"><span>🥇 우승 · 🥈 준우승 · 🥉 3위 상금</span><b>${P.podium.map(M).join(" · ")}</b></div>`; }
+  const D = CUP.DOM_P[c.kind];
+  return `<div class="kv"><span>라운드 승리 수당 (라운드가 오를수록 ↑)</span><b>${M(c.E * D.win)} ~ ${M(c.E * D.win * (1 + (c.steps.length - 1) * 0.6))}</b></div><div class="kv"><span>🥇 우승 · 🥈 준우승 · 🥉 3위 상금</span><b>${D.podium.map((k) => M(c.E * k)).join(" · ")}</b></div><p class="sub">홈 경기는 입장 수입도 들어와요(결승·3·4위전은 중립 경기장).</p>`;
+}
+function tabCups(el) {
+  const comps = S.comps || [], myCty = C.myLeague(S).country;
+  const L = C.myLeague(S), E = L.econ || 2e8, LP = C.LEAGUE_PRIZE;
+  const leaguePrize = `<div class="card"><h3>🏟 ${esc(L.name)} 시즌 상금</h3><div class="kv"><span>🥇 우승 · 🥈 준우승 · 🥉 3위 상금</span><b>${LP.podium.map((k) => M(E * k)).join(" · ")}</b></div><div class="kv"><span>순위 배당 상금 (1위 → 꼴찌)</span><b>${M(E * 0.08)} → ${M(E * 0.08 * 0.2)}</b></div><div class="kv"><span>⚽ 득점왕 · 🅰 도움왕 상금 (구단에)</span><b>${M(E * LP.scorer)} · ${M(E * LP.assist)}</b></div><div class="kv"><span>리그 승리 수당 · 홈 입장 수입</span><b>경기마다</b></div></div>`;
+  if (!comps.length) { el.innerHTML = phaseBox() + `<div class="card"><h3>🏆 컵 대회</h3><p class="sub">여름 이적시장이 닫히고 시즌이 시작되면 나라마다 FA컵·리그컵, 유럽에서는 챔피언스리그(5대 리그 상위권)와 유럽연합리그(포르투갈·스코틀랜드·오스트리아·스위스 1~3위)가 열려요.</p></div>` + leaguePrize; bindDay(); return; }
+  const rank = (c) => (c.myIn ? 100 : 0) + (c.kind === "cl" ? 40 : c.kind === "eul" ? 30 : 0) + (c.country === myCty ? 20 : 0) + (c.kind === "fa" ? 2 : 0);
+  const order = comps.slice().sort((a, b) => rank(b) - rank(a));
+  const c = CUP.comp(S, viewComp) || order[0];
+  const nm = (id) => (id ? esc(C.club(S, id).name) : "-"), me = (id) => (id === C.MY ? ` class="me"` : "");
+  const nextStep = c.done ? "끝" : c.steps[c.k] === "q" ? "예선 플레이오프" : c.steps[c.k] === "g" ? `조별리그 ${(c.gi || 0) + 1}차전` : c.alive && c.alive.length <= 2 ? "결승 · 3·4위전" : `${c.alive ? c.alive.length : "?"}팀 남음`;
+  const ev = (S.cal || []).slice(S.calI || 0).find((e) => e.c === c.id);
+  const podium = c.done ? `<div class="podium">${["🥇 우승", "🥈 준우승", "🥉 3위"].map((w, i) => `<div class="pd p${i + 1}${c.podium[i] === C.MY ? " me" : ""}"><span>${w}</span><b>${nm(c.podium[i])}</b></div>`).join("")}</div>` : "";
+  const sc = CUP.compScorer(S, c);
+  const groups = c.groups ? `<div class="card"><h3>조별리그</h3><div class="groups">${c.groups.map((g) => `<div><b class="sub">${g.name}조</b><table>${CUP.groupTable(c, g).map((r, i) => `<tr${me(r.id)}><td>${i + 1}</td><td>${nm(r.id)}</td><td class="n">${r.w}-${r.d}-${r.l}</td><td class="n"><b>${r.pts}</b></td></tr>`).join("")}</table></div>`).join("")}</div><p class="sub" style="margin-top:6px">조 1·2위가 토너먼트로 올라가요.</p></div>` : "";
+  const isMine = (t) => t.h === C.MY || t.a === C.MY;
+  const log = c.log.slice().reverse().map((rd, k) => { const ts = rd.ties.slice().sort((a, b) => isMine(b) - isMine(a));
+    return `<details ${k === 0 || ts.some(isMine) ? "open" : ""}><summary>${esc(rd.label)} · ${rd.ties.length}경기</summary><table>${ts.map((t) => `<tr${isMine(t) ? ` class="me"` : ""}><td>${t.tag === "third" ? `<span class="sub">3·4위전</span> ` : t.tag === "final" ? `<span class="sub">결승</span> ` : t.g ? `<span class="sub">${t.g}</span> ` : ""}${nm(t.h)}</td><td class="n"><b>${t.score[0]}:${t.score[1]}</b>${t.pens ? `<span class="sub"> (승부차기 ${t.pens[0]}:${t.pens[1]})</span>` : ""}</td><td>${nm(t.a)}</td></tr>`).join("")}</table></details>`; }).join("");
+  el.innerHTML = phaseBox() + `<div class="card"><select id="cSel" style="width:100%">${order.map((x) => `<option value="${x.id}" ${x === c ? "selected" : ""}>${x.icon} ${x.country ? CUP.flagOfCountry(x.country) + " " : ""}${esc(x.name)}${x.myIn ? " · 우리 팀 출전" : ""}</option>`).join("")}</select>
+      <div class="kv" style="margin-top:8px"><span>출전</span><b>${c.steps[0] === "q" && c.k === 0 ? `본선 직행 ${c.teams.length}팀 + 예선 ${c.qual.length}팀` : `${(c.teams || []).length}팀`}</b></div>
+      <div class="kv"><span>다음 단계</span><b>${esc(nextStep)}${ev ? ` · ${ev.at <= C.myLeague(S).played ? "이번 차례" : `리그 ${ev.at}라운드 끝나고`}` : ""}</b></div>
+      ${c.myIn ? `<div class="kv"><span>우리 팀</span><b>${esc(CUP.compStatus(S, c))}</b></div>` : ""}
+      <div class="kv"><span>⚽ 대회 득점 1위</span><b>${sc ? `${esc(sc.name)} (${esc(sc.club)}) ${sc.n}골` : "-"}</b></div>${podium}</div>
+    ${groups}${log ? `<div class="card"><h3>경기 결과</h3>${log}</div>` : ""}
+    <div class="card"><h3>💰 ${esc(c.name)} 상금·수당</h3>${prizeHTML(c)}</div>${leaguePrize}
+    <div class="card"><h3>출전 규칙</h3><p class="sub">⭐ 챔피언스리그: 5대 리그(잉글랜드·스페인·이탈리아·독일·프랑스) 1부 지난 시즌 상위 5~6팀 본선 직행 + 다음 순위 12팀 예선 → 32팀 8개 조 → 16강·8강·4강 → 3·4위전·결승. 지난 시즌 유럽연합리그 우승팀도 본선 직행.<br>🌍 유럽연합리그: 포르투갈·스코틀랜드·오스트리아·스위스 1부 1~3위 본선 직행 + 4·5위 예선 → 16팀 4개 조 → 8강·4강 → 3·4위전·결승.<br>🏆 FA컵: 그 나라 모든 리그 · 🏅 리그컵: 1·2부. 단판 토너먼트(윗리그 팀은 부전승으로 늦게 합류), 비기면 승부차기.<br>첫 시즌은 지난 순위 대신 선수단 종합 순으로 출전 팀을 정해요.</p></div>`;
+  bindDay();
+  $("cSel").onchange = (e) => { viewComp = e.target.value; hub(); };
+}
+
+// ---------------------------------------------------------------- 시즌 엔딩(한눈에 보기) + 엔딩샷(이미지)
+const EARN_KO = [["prize", "리그 상금"], ["cup", "국내 컵 상금·수당"], ["euro", "유럽 대회 상금·수당"], ["gate", "입장 수입"], ["bonus", "리그 승리 수당"], ["sponsor", "스폰서"], ["transfer", "이적 수지"], ["wage", "주급"], ["etc", "기타"]];
+function endingView(E) {
+  if (!E) return;
+  const my = E.my, nm = (c) => (c ? esc(c.name) : "-"), isMe = (c) => (c && c.id === C.MY ? " me" : "");
+  const pod = (arr) => `<div class="podium">${["🥇", "🥈", "🥉"].map((m, i) => `<div class="pd p${i + 1}${isMe(arr[i])}"><span>${m} ${["우승", "준우승", "3위"][i]}</span><b>${nm(arr[i])}</b></div>`).join("")}</div>`;
+  const ml = E.leagues.find((l) => l.name === my.league) || E.leagues[0];
+  const euro = E.comps.filter((c) => c.kind === "cl" || c.kind === "eul"), myCty = ml && ml.country, dom = E.comps.filter((c) => c.country === myCty), other = E.comps.filter((c) => c.country && c.country !== myCty);
+  const compBlock = (c) => `<div class="end-comp"><h4>${c.icon} ${c.flag ? c.flag + " " : ""}${esc(c.name)}${c.my != null ? ` <span class="tag">우리 ${esc(c.my || "-")}</span>` : ""}</h4>${pod(c.podium)}${c.scorer ? `<div class="sub" style="margin-top:4px">⚽ 득점왕 ${esc(c.scorer.name)} (${esc(c.scorer.club)}) ${c.scorer.n}골</div>` : ""}</div>`;
+  const earn = my.earn || {}, tot = Object.values(earn).reduce((a, b) => a + b, 0);
+  modal(`<div class="ending">
+    <div class="end-hero" style="--c1:${my.c1};--c2:${my.c2}"><small>SEASON ENDING</small><h2>${esc(E.season)} 시즌 엔딩</h2>
+      <div class="end-team">${badge(my, 62)}<div><b>${esc(my.name)}</b><span>${my.flag} ${esc(my.league)} <em>${my.rank}위</em> / ${my.n} · 승점 ${my.pts} (${my.w}승 ${my.d}무 ${my.l}패, ${my.gf}득 ${my.ga}실)${my.move === "up" ? " · 🎉 승격" : my.move === "down" ? " · ⬇ 강등" : ""}</span></div></div>
+      ${my.trophies.length ? `<div class="end-tro">${my.trophies.map((t) => `<span>🏆 ${esc(t)}</span>`).join("")}</div>` : ""}
+      <div class="end-chips">${E.comps.filter((c) => c.my != null).map((c) => `<span>${c.icon} ${esc(c.name)} · <b>${esc(c.my || "-")}</b></span>`).join("")}</div></div>
+    <div class="card"><h3>💰 이번 시즌 돈 흐름</h3>${EARN_KO.filter(([k]) => earn[k]).map(([k, n]) => `<div class="kv"><span>${n}</span><b style="color:${earn[k] >= 0 ? "var(--green)" : "var(--red)"}">${earn[k] >= 0 ? "+" : ""}${money(earn[k])}</b></div>`).join("")}<div class="kv"><span><b>합계</b></span><b>${tot >= 0 ? "+" : ""}${money(tot)}</b></div><div class="kv"><span>시즌 끝 운영비</span><b>${money(my.budget)}</b></div></div>
+    ${ml ? `<div class="card"><h3>🏟 ${ml.flag} ${esc(ml.name)}</h3>${pod(ml.podium)}<div class="kv" style="margin-top:6px"><span>⚽ 득점왕</span><b>${ml.scorer ? `${esc(ml.scorer.name)} (${esc(ml.scorer.club)}) ${ml.scorer.n}골` : "-"}</b></div><div class="kv"><span>🅰 도움왕</span><b>${ml.assist ? `${esc(ml.assist.name)} (${esc(ml.assist.club)}) ${ml.assist.n}도움` : "-"}</b></div><div class="kv"><span>⭐ MVP</span><b>${ml.mvp ? `${esc(ml.mvp.name)} (${esc(ml.mvp.club)}) 평점 ${ml.mvp.n}` : "-"}</b></div></div>` : ""}
+    ${euro.length ? `<div class="card"><h3>🌍 유럽 대회</h3>${euro.map(compBlock).join("")}</div>` : ""}
+    ${dom.length ? `<div class="card"><h3>${ml ? ml.flag : ""} 국내 컵</h3>${dom.map(compBlock).join("")}</div>` : ""}
+    <div class="card"><h3>📋 모든 리그 — 우승 · 준우승 · 득점왕</h3><table class="end-tab"><tr><th>리그</th><th>🥇 우승</th><th>🥈 준우승</th><th>⚽ 득점왕</th></tr>${E.leagues.map((l) => `<tr class="${l.podium.some((c) => c && c.id === C.MY) ? "me" : ""}"><td>${l.flag} ${esc(l.name)}</td><td>${nm(l.podium[0])}</td><td>${nm(l.podium[1])}</td><td>${l.scorer ? `${esc(l.scorer.name)} ${l.scorer.n}` : "-"}</td></tr>`).join("")}</table></div>
+    ${other.length ? `<details class="card"><summary><b>🏆 다른 나라 컵 대회</b></summary><table class="end-tab"><tr><th>대회</th><th>🥇 우승</th><th>🥈 준우승</th><th>🥉 3위</th></tr>${other.map((c) => `<tr><td>${c.flag} ${esc(c.name)}</td><td>${nm(c.podium[0])}</td><td>${nm(c.podium[1])}</td><td>${nm(c.podium[2])}</td></tr>`).join("")}</table></details>` : ""}
+    <div class="row" style="margin-top:12px"><button class="big" id="eShot" style="flex:1">📸 엔딩샷 저장</button><button class="sm" id="eX">닫기</button></div></div>`);
+  $("modal").querySelector(".sheet").classList.add("tall");
+  $("eX").onclick = closeModal;
+  $("eShot").onclick = () => endingShot(E);
+}
+// 엔딩샷: 9:16 그림(1080×1920)으로 그려 저장·공유
+async function endingShot(E) {
+  try { await document.fonts.load("900 40px Pretendard"); await document.fonts.load("700 30px Pretendard"); } catch (e) {}
+  const W = 1080, H = 1920, cv2 = document.createElement("canvas"); cv2.width = W; cv2.height = H; const g = cv2.getContext("2d");
+  const F = (w, px) => `${w} ${px}px Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif`;
+  const fit = (t, max) => { t = String(t || "-"); if (g.measureText(t).width <= max) return t; while (t.length > 1 && g.measureText(t + "…").width > max) t = t.slice(0, -1); return t + "…"; };
+  const txt = (t, x, y, font, color, max = 960, align = "left") => { g.font = font; g.fillStyle = color; g.textAlign = align; g.fillText(fit(t, max), x, y); };
+  const my = E.my;
+  // 배경: 밤 경기장 + 우리 팀 색
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#0b1a2c"); bg.addColorStop(0.55, "#0f2a3d"); bg.addColorStop(1, "#0b3a26"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.globalAlpha = 0.18; g.fillStyle = my.c1; g.beginPath(); g.arc(W / 2, 330, 520, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+  txt("PUREDAY FC  ·  SEASON ENDING", W / 2, 110, F(800, 30), "#ffd34a", 960, "center");
+  txt(`${E.season} 시즌 엔딩`, W / 2, 200, F(900, 76), "#ffffff", 980, "center");
+  // 우리 팀
+  g.fillStyle = my.c1; g.beginPath(); g.arc(W / 2, 360, 92, 0, Math.PI * 2); g.fill(); g.lineWidth = 12; g.strokeStyle = my.c2; g.stroke();
+  txt(my.short, W / 2, 380, F(900, 54), lum(my.c1) > 0.6 ? "#111" : "#fff", 160, "center");
+  txt(my.name, W / 2, 515, F(900, 58), "#ffffff", 980, "center");
+  txt(`${my.league} ${my.rank}위 / ${my.n}  ·  승점 ${my.pts}  ·  ${my.w}승 ${my.d}무 ${my.l}패${my.move === "up" ? "  ·  승격!" : my.move === "down" ? "  ·  강등" : ""}`, W / 2, 575, F(700, 34), "#c9d6ea", 980, "center");
+  let y = 640;
+  if (my.trophies.length) { txt("★ " + my.trophies.join("  ·  ") + " ★", W / 2, y, F(900, 38), "#ffd34a", 980, "center"); y += 56; }
+  const chips = E.comps.filter((c) => c.my != null).map((c) => `${c.name} ${c.my || "-"}`).join("  ·  ");
+  if (chips) { txt(chips, W / 2, y, F(700, 30), "#9fb0c8", 980, "center"); y += 50; }
+  // 블록: 대회마다 우승·준우승·3위
+  const medal = ["#ffd34a", "#d6dde8", "#e0a26a"];
+  const block = (title, podium, extra) => {
+    y += 18; const h = extra ? 196 : 150; g.fillStyle = "rgba(255,255,255,.07)"; roundRect(g, 60, y, W - 120, h, 26); g.fill();
+    txt(title, 96, y + 52, F(900, 36), "#ffffff", 880);
+    podium.forEach((c, i) => { const x = 96 + i * 300; g.fillStyle = medal[i]; g.beginPath(); g.arc(x + 20, y + 101, 20, 0, Math.PI * 2); g.fill(); txt(String(i + 1), x + 20, y + 111, F(900, 26), "#1b2333", 40, "center"); const mine = c && c.id === C.MY; txt(c ? c.name : "-", x + 52, y + 112, F(mine ? 900 : 700, 30), mine ? "#ffd34a" : "#eef3fb", 240); });
+    if (extra) txt(extra, 96, y + 166, F(700, 27), "#9fb0c8", 880);
+    y += h;
+  };
+  const ml = E.leagues.find((l) => l.name === my.league) || E.leagues[0];
+  if (ml) block(ml.name, ml.podium, `득점왕 ${ml.scorer ? `${ml.scorer.name} ${ml.scorer.n}골` : "-"}   ·   도움왕 ${ml.assist ? `${ml.assist.name} ${ml.assist.n}` : "-"}`);
+  // 우리 팀이 나간 대회(성적 좋은 순) → 나머지 유럽 대회 → 우리 나라 컵, 3개까지
+  const RES = ["우승", "준우승", "3위", "4위"], resK = (c) => { const k = RES.indexOf(c.my); return k < 0 ? 9 : k; };
+  const want = [...E.comps.filter((c) => c.my != null).sort((a, b) => resK(a) - resK(b)), ...E.comps.filter((c) => c.my == null && (c.kind === "cl" || c.kind === "eul")), ...E.comps.filter((c) => c.my == null && c.country === (ml && ml.country))];
+  for (const c of want.slice(0, 3)) block(`${c.name}${c.my ? `  ·  우리 ${c.my}` : ""}`, c.podium, c.scorer ? `득점왕 ${c.scorer.name} (${c.scorer.club}) ${c.scorer.n}골` : "");
+  // 1부 리그 우승팀
+  const tops = E.leagues.filter((l) => l.tier === 1 && l !== ml);
+  if (tops.length && y < 1660) {
+    y += 64; txt("1부 리그 우승", 96, y, F(900, 34), "#ffd34a", 600);
+    const rows = Math.min(Math.ceil(tops.length / 2), Math.floor((1830 - (y + 50)) / 46) + 1);   // 바닥 글씨(1886)와 안 겹치게
+    tops.slice(0, rows * 2).forEach((l, i) => { const cx = i % 2 ? 560 : 96, cy = y + 50 + Math.floor(i / 2) * 46; txt(`${l.name}: ${l.podium[0] ? l.podium[0].name : "-"}`, cx, cy, F(700, 27), "#dfe7f4", 430); });
+  }
+  txt("퓨어데이 FC · 커리어 모드", W / 2, H - 34, F(700, 26), "rgba(255,255,255,.45)", 900, "center");
+  const url = cv2.toDataURL("image/png");
+  modal(`<h2>📸 엔딩샷</h2><p class="sub">폰에서는 그림을 길게 눌러 저장하거나 공유하세요.</p><img src="${url}" alt="시즌 엔딩샷" style="width:100%;border-radius:12px;margin-top:10px">
+    <div class="row" style="margin-top:10px"><a class="big" id="eDl" href="${url}" download="pureday-fc-ending-${E.season.replace("/", "-")}.png" style="flex:1;display:flex;align-items:center;justify-content:center;text-decoration:none">⬇ 그림 파일로 저장</a><button class="sm" id="eBack">엔딩으로</button></div>`);
+  $("eBack").onclick = () => endingView(E);
+}
+function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
 // ---------------------------------------------------------------- 리그·소식
 let viewLeague = null;
@@ -767,5 +994,5 @@ if (hp.has("demo")) {   // 개발: #demo 컴퓨터끼리 경기 화면 · #demo&
   const w = makeWorld(); const mk = (c) => { const sq = w.players.filter((p) => p.club === c.id); return teamFromClub(c, sq, autoLineup(sq, DEFAULT_TACTIC), DEFAULT_TACTIC); };
   OPT.halfSec = Number(hp.get("half")) || OPT.halfSec;
   startMatch({ teams: [mk(w.clubs[0]), mk(w.clubs[1])], human: [hp.has("human"), false], mode: "friendly" });
-} else title();
+} else { title(); cloudCheck(); }
 window.__fc = { get S() { return S; }, get G() { return G; }, C, get IN() { return IN; } };
