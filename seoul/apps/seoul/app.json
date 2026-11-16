@@ -1,0 +1,13 @@
+{
+  "id": "seoul",
+  "kind": "app",
+  "title": "서울 종로 거리",
+  "icon": "🏙",
+  "version": "1.0.0",
+  "order": 25,
+  "entry": "index.js",
+  "requires": [
+    "basic"
+  ],
+  "description": "블렌더로 지은 서울 종로 네거리(한옥 마을 · 종루 · 상가 · 경복궁 궐문)와 경복궁 옆 퓨어데이 센터(5층 + 옥상 정원, 층마다 인테리어 · 계단 · 엘리베이터). 비행선 70m 아래, 바로 들어가기 ?room=seoul · 센터 1층 ?room=pureday. 원본: blender/seoul.py"
+}

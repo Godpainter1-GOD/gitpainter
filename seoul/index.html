@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#18232c">
+<title>파리 상공 · 부유선</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M15 3h2l1 12 8 14h-7l-3-7-3 7H6l8-14z' fill='%23c4a475'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="appshell.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body>
+<main id="experience" aria-label="파리 상공 부유선 3D 전망 공간">
+ <canvas id="scene" tabindex="0" aria-label="파리 상공 360° 전망"></canvas>
+ <div id="loading" role="status" aria-live="polite"><div class="loading-mark">AIRSHIP</div><p id="load-text">전망 데크를 준비하고 있어요</p><span class="loading-line"></span></div>
+ <header class="topbar">
+  <div class="identity"><span class="eyebrow">PARIS · EIFFEL TOWER 360°</span><h1>파리 상공</h1><p>세느강 위, 에펠탑과 파리 시내를 내려다보는 시간.</p></div>
+  <div class="top-actions"><span class="altitude" title="내 시점 고도 · Shift+위아래 드래그 또는 휠로 조절"><span class="dot"></span>고도 <b id="altitude">70</b><span>m</span></span><button id="help-button" class="icon-button" aria-label="조작 방법 보기" aria-expanded="false">?</button><button id="fullscreen" class="icon-button" aria-label="전체 화면">⛶</button><button id="ui-toggle" class="icon-button" aria-label="아이콘 숨기기" aria-pressed="false" title="아이콘 숨기기 (H)">👁</button></div>
+ </header>
+ <nav class="views" aria-label="전망과 도시 선택">
+  <button data-view="tower" aria-pressed="false">에펠탑</button><button data-view="yeouido" aria-pressed="false">몽마르트르</button><button data-view="hangang" aria-pressed="false">센강</button><button data-view="overview" aria-pressed="false">부유선 전체</button><span class="divider"></span><button data-bg="paris" class="city active" aria-pressed="true" title="배경을 파리 상공으로">파리</button><button data-bg="seoul" class="city" aria-pressed="false" title="배경을 서울 상공으로">서울</button>
+ </nav>
+ <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+ <section class="location" aria-live="polite"><span class="location-label" id="view-kicker">MY CHARACTER</span><h2 id="view-title">리카의 파리 산책.</h2><p id="view-description">W / S 또는 ↑ / ↓로 앞뒤 이동 · A / D 또는 ← / →로 방향 전환</p></section>
+ <aside id="help" class="help-panel" hidden><h2>전망을 즐기는 방법</h2>
+  <p>화면을 드래그하면 둘러보고, 데크를 누르면 그곳으로 걸어가요. 기능은 모두 <b>앱</b>이에요. 왼쪽 <b>⚙</b>를 누르면 폴더별로 정리된 앱이 나오고, ☆로 즐겨찾기한 앱은 바탕화면(왼쪽 아이콘 줄)에 꺼내 둘 수 있어요. 아이콘을 오른쪽 클릭(폰은 길게 누르기)하면 뺄 수 있어요.</p>
+  <dl><div><dt>W / S 또는 ↑ / ↓</dt><dd>앞뒤로 걷기</dd></div><div><dt>A / D 또는 ← / →</dt><dd>방향 바꾸기</dd></div><div><dt>Shift + 걷기</dt><dd>조금 빠르게</dd></div><div><dt>Shift + 위아래 드래그 / 휠</dt><dd>내 시점 고도</dd></div><div><dt>모서리에서 E → 다른 배 클릭</dt><dd>비행선 이동</dd></div><div><dt>V</dt><dd>1인칭 ↔ 주인공 시점</dd></div><div><dt>H</dt><dd>아이콘 숨기기 / 보이기</dd></div><div><dt>Esc</dt><dd>전망·강의 시점 풀기</dd></div></dl>
+  <p><b>🌦 날씨 조절</b>은 맑음·눈·비·태풍과 구름을 바꿔요. 배 모서리에서 <b>E</b>를 누르고 다른 비행선을 누르면 그 배로 건너가요.</p>
+  <div id="help-extra"></div>
+  <p id="bg-credit" class="credit"></p><button id="close-help">알겠어요</button></aside>
+ <footer class="bottom-bar">
+  <div class="walk-modes" role="group" aria-label="산책 시점"><button id="first-person" aria-pressed="false"><span>◉</span> 내 눈으로 산책</button><button id="follow" aria-pressed="false"><span>♙</span> 주인공 모드</button></div>
+  <div class="deck-controls" role="group" aria-label="처음 위치"><button id="home" aria-label="처음 위치로 돌아가기" title="처음 위치로">↺</button></div>
+ </footer>
+ <div class="navigation" role="group" aria-label="클릭으로 걷기"><div class="look-controls" role="group" aria-label="고개 들기와 내리기"><button type="button" data-look="up" aria-label="고개 올려다보기" title="누르고 있으면 고개를 들어요">시선 ↑</button><button type="button" id="look-reset" aria-label="기본 시선으로 돌아가기">기본</button><button type="button" data-look="down" aria-label="고개 내려다보기" title="누르고 있으면 고개를 내려요">시선 ↓</button></div><button data-key="ArrowUp" aria-label="앞으로 걷기">↑</button><div><button data-key="ArrowLeft" aria-label="왼쪽으로 돌기">←</button><button id="step" aria-pressed="false" aria-label="누르면 방향키로 시선 둘러보기">한 걸음</button><button id="btn-v" aria-pressed="false" aria-label="시점 변경 (내 눈 / 주인공)" title="시점 변경 (V)">V</button><button data-key="ArrowRight" aria-label="오른쪽으로 돌기">→</button></div><button data-key="ArrowDown" aria-label="뒤로 걷기">↓</button></div>
+ <div class="hint" id="hint">위아래 드래그·시선 ↑↓로 고개 돌리기 · Shift+드래그로 고도 조절 · WASD 산책</div>
+ <button id="ui-restore-btn" class="ui-restore-btn" aria-label="아이콘 다시 표시" title="아이콘 다시 표시 (H)" hidden>👁</button>
+ <div id="error" role="alert" hidden><h2>공간을 불러오지 못했어요</h2><p id="error-message"></p><button id="reload">다시 불러오기</button></div>
+</main>
+<script type="module" src="main.js"></script>
+</body></html>

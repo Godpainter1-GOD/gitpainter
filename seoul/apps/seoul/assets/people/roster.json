@@ -1,0 +1,122 @@
+[
+  {
+    "key": "aj",
+    "name": "Aj",
+    "height_m": 1.845,
+    "triangles": 4999
+  },
+  {
+    "key": "amy",
+    "name": "Amy",
+    "height_m": 1.467,
+    "triangles": 5000
+  },
+  {
+    "key": "abe",
+    "name": "Abe",
+    "height_m": 1.785,
+    "triangles": 4999
+  },
+  {
+    "key": "james",
+    "name": "James",
+    "height_m": 1.818,
+    "triangles": 4999
+  },
+  {
+    "key": "roth",
+    "name": "Roth",
+    "height_m": 1.753,
+    "triangles": 4999
+  },
+  {
+    "key": "kate",
+    "name": "Kate",
+    "height_m": 1.753,
+    "triangles": 4999
+  },
+  {
+    "key": "ty",
+    "name": "Ty",
+    "height_m": 2.101,
+    "triangles": 5000
+  },
+  {
+    "key": "suzie",
+    "name": "Suzie",
+    "height_m": 1.75,
+    "triangles": 5000
+  },
+  {
+    "key": "michelle",
+    "name": "Michelle",
+    "height_m": 1.649,
+    "triangles": 5000
+  },
+  {
+    "key": "sophie",
+    "name": "Sophie",
+    "height_m": 1.762,
+    "triangles": 5000
+  },
+  {
+    "key": "brian",
+    "name": "Brian",
+    "height_m": 1.751,
+    "triangles": 4999
+  },
+  {
+    "key": "bryce",
+    "name": "Bryce",
+    "height_m": 1.794,
+    "triangles": 5000
+  },
+  {
+    "key": "pete",
+    "name": "Pete",
+    "height_m": 1.78,
+    "triangles": 5000
+  },
+  {
+    "key": "joe",
+    "name": "Joe",
+    "height_m": 1.77,
+    "triangles": 4999
+  },
+  {
+    "key": "elizabeth",
+    "name": "Elizabeth",
+    "height_m": 1.776,
+    "triangles": 4999
+  },
+  {
+    "key": "chad",
+    "name": "Chad",
+    "height_m": 1.768,
+    "triangles": 4999
+  },
+  {
+    "key": "jennifer",
+    "name": "Jennifer",
+    "height_m": 1.769,
+    "triangles": 4999
+  },
+  {
+    "key": "jody",
+    "name": "Jody",
+    "height_m": 1.728,
+    "triangles": 5000
+  },
+  {
+    "key": "alex",
+    "name": "Alex",
+    "height_m": 1.77,
+    "triangles": 5000
+  },
+  {
+    "key": "martha",
+    "name": "Martha",
+    "height_m": 1.748,
+    "triangles": 5000
+  }
+]

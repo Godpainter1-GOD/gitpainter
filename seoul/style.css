@@ -1,0 +1,109 @@
+/* newgame · 부유선 전망 공간. 색·모양은 bongsik/project-map/m003 그대로(날씨·갤러리·모퉁이 이동의 스타일은 각 모듈이 스스로 붙인다) */
+:root{color-scheme:dark;--ink:#fffaf1;--muted:#dbd9d1;--panel:rgba(18,28,34,.65);--line:rgba(255,255,255,.20);--accent:#e4c99b;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{background:#4c6d83;color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;-webkit-tap-highlight-color:transparent;transition:background .18s,color .18s,transform .18s}
+button:focus-visible,a:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+button:hover{background:rgba(255,255,255,.15)}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.5;cursor:default}
+#experience,#scene{width:100%;height:100%;position:absolute;inset:0}
+#scene{display:block;touch-action:none;outline-offset:-5px}
+#experience:after{content:"";pointer-events:none;position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,24,38,.30),transparent 25%,transparent 68%,rgba(10,20,24,.45));z-index:1}
+
+.topbar{position:absolute;top:32px;left:40px;right:40px;display:flex;justify-content:space-between;align-items:flex-start;z-index:3;pointer-events:none}
+.identity{text-shadow:0 2px 20px #14233055}
+.eyebrow{font-size:10px;letter-spacing:.24em;color:#f0e4cf}
+.identity h1{font-size:30px;font-weight:550;letter-spacing:-.05em;margin:8px 0 7px}
+.identity p{font-size:12px;color:#fff7e6e6;margin:0;letter-spacing:.02em}
+.top-actions{display:flex;align-items:center;gap:10px;pointer-events:auto}
+.altitude{display:flex;align-items:baseline;gap:5px;font-size:11px;letter-spacing:.03em;margin-right:8px;text-shadow:0 1px 6px #0008}
+.altitude b{font-size:22px;font-weight:450;font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#d9eccf;margin-right:5px;align-self:center}
+.icon-button{background:var(--panel);border:1px solid var(--line);border-radius:50%;width:36px;height:36px;font-size:18px;backdrop-filter:blur(14px)}
+
+.views{position:absolute;top:34px;left:50%;transform:translateX(-50%);display:flex;align-items:center;max-width:calc(100% - 36px);padding:5px;background:var(--panel);border:1px solid var(--line);border-radius:8px;z-index:3;backdrop-filter:blur(18px);white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.views::-webkit-scrollbar{display:none}
+.views button{flex:none;padding:10px 17px;background:transparent;border-radius:4px;font-size:12px;letter-spacing:.01em;color:#eee8dccc}
+.views button.active{background:#f1e6d7;color:#293333}
+.views button.city{color:var(--accent);font-weight:600}
+.views button.city.active{background:var(--accent);color:#293333}
+.divider{flex:none;height:18px;width:1px;background:var(--line);margin:0 4px}
+
+.notice{position:absolute;left:50%;top:105px;transform:translateX(-50%);z-index:8;max-width:calc(100% - 36px);padding:9px 15px;border:1px solid var(--line);border-radius:8px;background:rgba(18,28,34,.9);font-size:12px;line-height:1.5;text-align:center;pointer-events:none}
+.notice[hidden]{display:none}
+
+.location{position:absolute;left:40px;bottom:118px;z-index:2;pointer-events:none;text-shadow:0 2px 15px #0007}
+.location-label{font-size:10px;letter-spacing:.23em;color:var(--accent)}
+.location h2{font-size:26px;letter-spacing:-.04em;font-weight:450;margin:9px 0}
+.location p{font-size:12px;color:#fff6e9cc;line-height:1.7;margin:0}
+
+.bottom-bar{position:absolute;left:40px;right:40px;bottom:33px;z-index:4;display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+.walk-modes,.deck-controls{display:flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);padding:5px;border-radius:8px;backdrop-filter:blur(18px);pointer-events:auto}
+.walk-modes button,.deck-controls button{border-radius:4px;padding:11px 15px;background:transparent;font-size:12px;white-space:nowrap}
+.walk-modes button span,.deck-controls button span{margin-right:7px;font-size:14px}
+.walk-modes button[aria-pressed=true],.deck-controls button[aria-pressed=true]{background:#f1e6d7;color:#293333}
+.deck-controls{margin-left:auto}
+#home{font-size:21px;padding:5px 14px}
+
+.navigation{position:absolute;right:42px;bottom:115px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4;user-select:none;touch-action:none}
+.navigation div{display:flex;gap:4px;align-items:center}
+.navigation button{background:rgba(18,28,34,.5);border:1px solid var(--line);border-radius:5px;backdrop-filter:blur(10px);width:37px;height:32px;font-size:16px;touch-action:none}
+.navigation .look-controls button{width:auto;padding:0 8px;font-size:10px}
+.navigation #step{width:54px;font-size:10px;padding:0 2px}
+.navigation #step[aria-pressed=true]{background:var(--accent);color:#293333;font-weight:700}
+.navigation.look-mode button[data-key]{background:rgba(228,201,155,.24);color:var(--accent);border-color:var(--accent)}
+.navigation #btn-v{width:32px;font-size:12px;font-weight:700;color:var(--accent);border-color:rgba(228,201,155,.45)}
+.navigation #btn-v[aria-pressed=true]{background:var(--accent);color:#293333}
+
+.hint{position:absolute;z-index:3;left:50%;bottom:50px;transform:translateX(-50%);font-size:10px;color:#ffffffb3;letter-spacing:.04em;pointer-events:none;white-space:nowrap}
+
+.help-panel{position:absolute;right:40px;top:90px;z-index:9;width:340px;max-height:calc(100% - 130px);overflow-y:auto;background:rgba(20,31,38,.96);border:1px solid var(--line);border-radius:10px;padding:24px;box-shadow:0 15px 60px #0003}
+.help-panel h2{font-size:17px;font-weight:500;margin:0 0 16px}
+.help-panel p{font-size:12px;line-height:1.8;color:#deded8}
+.help-panel p.credit{font-size:11px;color:var(--muted)}
+.help-panel dl{font-size:11px;margin:0}
+.help-panel dl div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #fff1}
+.help-panel dd{margin:0;color:var(--accent);text-align:right}
+.help-panel button,#error button{padding:10px 18px;background:#e6d0ae;color:#26333b;border-radius:4px;margin-top:10px}
+.help-panel[hidden],#error[hidden],#loading[hidden]{display:none}
+
+#loading{position:absolute;inset:0;z-index:10;background:#192b36;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.loading-mark{font-family:Georgia,serif;font-size:42px;letter-spacing:.24em;font-weight:400;color:#e8d3b0;padding-left:.24em}
+.loading-line{margin-top:20px;width:135px;height:1px;background:linear-gradient(90deg,transparent,#e8d3b0,transparent);animation:breathe 1.8s ease-in-out infinite}
+#loading p{font-size:12px;color:#c4cbd0;margin-top:18px}
+#error{position:absolute;inset:0;display:grid;place-content:center;background:#1a2b35e8;text-align:center;z-index:12;padding:30px}
+#error h2{font-size:22px}
+#error p{font-size:13px;max-width:500px;line-height:1.7;color:#ddd}
+#error button{justify-self:center}
+@keyframes breathe{50%{opacity:.25;transform:scaleX(.65)}}
+
+/* 전시 벽을 타는 동안: 작품을 가리는 것들을 치운다(조작 줄은 drawing-wall.js가 띄운다) */
+body.riding :is(.identity,.views,.location,.bottom-bar,.navigation,.hint,.transfer-prompt){display:none}
+
+/* 화면 정리(H): 풍경만 남긴다 */
+body.ui-hidden :is(.topbar,.views,.location,.bottom-bar,.navigation,.hint,.notice,.help-panel,.weather-btn,.weather-panel,.transfer-prompt,.transfer-notice){opacity:0!important;pointer-events:none!important;visibility:hidden!important}
+.ui-restore-btn{position:absolute;top:20px;right:20px;z-index:20;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(18,28,34,.35);backdrop-filter:blur(8px);color:#fff9;font-size:20px;display:grid;place-items:center;opacity:.45}
+.ui-restore-btn:hover{opacity:.95;color:#fff;background:rgba(18,28,34,.75)}
+.ui-restore-btn[hidden]{display:none}
+
+@media(max-width:1100px){.hint{display:none}}
+@media(max-width:900px){
+ .topbar{top:23px;left:25px;right:25px}.identity h1{font-size:25px}.identity p{display:none}
+ .views{top:105px}.notice{top:160px}
+ .location{left:25px;bottom:125px}.location h2{font-size:23px}
+ .bottom-bar{left:25px;right:25px;bottom:25px}.navigation{right:27px;bottom:115px}
+ .help-panel{right:25px;top:150px;max-height:calc(100% - 180px)}
+}
+@media(max-width:580px){
+ .topbar{left:19px;right:19px;top:20px}.eyebrow{font-size:8px}.identity h1{font-size:24px}
+ .altitude{margin-right:0;font-size:9px}.altitude b{font-size:18px}.icon-button{width:30px;height:30px;font-size:15px}.top-actions{gap:6px}
+ .views{top:98px}.views button{padding:10px 11px;font-size:11px}.notice{top:150px;font-size:11px}
+ .location{left:20px;bottom:177px;max-width:60%}.location h2{font-size:21px}.location p{font-size:10px;max-width:200px}.location-label{font-size:8px}
+ .bottom-bar{left:18px;right:18px;bottom:max(20px,env(safe-area-inset-bottom));gap:10px;align-items:flex-end;flex-wrap:wrap}
+ .walk-modes{width:100%;justify-content:center}.walk-modes button{flex:1;padding:12px 10px}
+ .deck-controls{order:-1;margin-left:auto}.deck-controls button{font-size:11px;padding:8px 10px}
+ .navigation{right:20px;bottom:166px}.navigation button{width:33px;height:30px}.navigation #step{width:47px}
+ .help-panel{right:18px;top:144px;width:calc(100% - 36px);max-width:340px;padding:18px}
+}
