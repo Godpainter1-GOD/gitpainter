@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KICKOFF 킥오프</title>
+<meta name="theme-color" content="#0f8a4d">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <a class="logo" href="#/">KICK<span>OFF</span></a>
+    <nav class="nav-top" aria-label="주 메뉴">
+      <a href="#/" data-nav="home">홈</a>
+      <a href="#/rumors" data-nav="rumors">루머</a>
+      <a href="#/players" data-nav="players">선수</a>
+      <a href="#/stats" data-nav="stats">경기·스탯</a>
+    </nav>
+    <button class="theme" id="theme" type="button" aria-label="밝은 화면과 어두운 화면 바꾸기">◐</button>
+  </div>
+  <div class="search-wrap">
+    <form class="search" id="searchForm" role="search" autocomplete="off">
+      <select id="sport" aria-label="종목">
+        <option>축구</option>
+        <option disabled>농구 (준비 중)</option>
+        <option disabled>야구 (준비 중)</option>
+      </select>
+      <input id="q" type="search" placeholder="전 세계 선수나 팀 이름 (예: 손흥민, Wrexham, 음바페)" aria-label="검색">
+      <button type="submit">검색</button>
+      <div class="ac" id="ac" hidden></div>
+    </form>
+  </div>
+</header>
+
+<div class="sample-bar">프로토타입입니다. <b>샘플</b> 표시가 붙은 기사, 루머, 경기 결과, 수치는 화면 시연용이며 실제 보도가 아닙니다. 팀·선수 링크와 경력은 위키데이터 실시간 자료입니다.</div>
+
+<main id="app" tabindex="-1"></main>
+
+<nav class="nav-bottom" aria-label="하단 메뉴">
+  <a href="#/" data-nav="home"><i>🏠</i>홈</a>
+  <a href="#/rumors" data-nav="rumors"><i>🔥</i>루머</a>
+  <a href="#/players" data-nav="players"><i>👤</i>선수</a>
+  <a href="#/stats" data-nav="stats"><i>📊</i>경기·스탯</a>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data.js?v=2"></script>
+<script src="data_detail.js?v=2"></script>
+<script src="world.js?v=1"></script>
+<script src="fees.js?v=2"></script>
+<script src="wd.js?v=9"></script>
+<script src="app.js?v=3"></script>
+</body>
+</html>
