@@ -2,11 +2,11 @@ window.PORTAL = {
  "series": [
   {
    "id": "pureday4",
-   "title": "퓨어데이 4부",
+   "title": "퓨어데이 시리즈 4",
    "subtitle": "음악과 암흑코어",
    "genre": "현대 판타지 · SF · 웹툰",
    "logline": "일상 속으로 스며든 홍린의 AI 기기. 퓨어데이 팀은 서로의 목소리를 지키며 달기지 콘서트로 향하는 단서를 추적한다.",
-   "status": "4부 제1~6화 공개 · 각75컷",
+   "status": "시리즈 4 제1~6화 공개 · 각75컷",
    "cover": "assets/pureday4/ep01/S4E01_C041_v1.webp",
    "episodes": [
     {
